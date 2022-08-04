@@ -1,14 +1,11 @@
-# importing libraries
-from ctypes import util
-from glob import glob
+# importing libraries 
 import PySimpleGUI as sg
 import cv2
 import numpy as np 
 import math
 import data
 import utils
-import threading
-import time
+import threading 
 from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 
@@ -24,6 +21,16 @@ vpc = utils.ViewPort('camera')
 rgb_black = (0, 0, 0)
 rgb_white = (255, 255, 255)
 
+# colors of agent triangles
+agent = {'blue': None,
+         'green': None,
+         'yellow': None}  
+
+# init agents with id and no attributes
+for col in agent.keys():
+    agent[col] = utils.Agent(col) 
+    
+# layout for first monitor
 def main_layout():
     # define the window layout
     layout = [[sg.Text('Virtual Environment', size=(40, 1), justification='center', font='Helvetica 20')],
@@ -32,7 +39,7 @@ def main_layout():
                sg.Button('Exit', size=(10, 1),  font='Helvetica 14')]] 
     return layout
 
-
+# layout for second monitor
 def second_layout():
     # define the window layout to project drawings
     layout = [[sg.Graph((vpv.u_max + 5, vpv.v_max + 5), (0, 0), (vpv.u_max + 5, vpv.v_max + 5), enable_events=True, key='-GRAPH-', pad=(0,0))]]
@@ -45,27 +52,26 @@ def draw_marks():
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
     return
 
-
+# clear projection in second monitor
 def clear_screen():
     draw.erase()
-    print('clear')
     draw_marks()
     return
 
-
+# centroid of rectangle
 def centroid(count):
     M = cv2.moments(count)
     cx = round(M['m10'] / M['m00'], 2)
     cy = round(M['m01'] / M['m00'], 2)  
     return cx, cy
 
-
+# centroid of triangle
 def center(vx, vy):
     cx = round((vx[0] + vx[1] + vx[2]) / 3, 2)
     cy = round((vy[0] + vy[1] + vy[2]) / 3, 2)
     return cx, cy
     
-
+# function to define region of interest
 def new_corner(corner, num, x, y):
     corner.append(x)
     corner.append(y)
@@ -77,7 +83,6 @@ def line_length(x1, y1, x2, y2):
     x_dif = x1 - x2
     y_dif = y1 - y2
     return x_dif * x_dif + y_dif * y_dif
-
 
 # get all angles of given 3 points of triangle and returns the min angle vertex found
 def get_vertex(x1, y1, x2, y2, x3, y3):
@@ -108,7 +113,6 @@ def get_vertex(x1, y1, x2, y2, x3, y3):
     elif beta > gamma < alpha: 
         return x3, y3 
     
-    
 # get direction of the triangle using min angle triangle vertices and centroid
 def direction_angle(cx, cy, vx, vy):
     diff_x = vx - cx
@@ -122,7 +126,6 @@ def direction_angle(cx, cy, vx, vy):
     if vy > cy:
         angle = 360 - angle 
     return round(angle, 2)
-
 
 # distance between 2 points  
 def get_distance(x1, x2, y1, y2):
@@ -139,13 +142,33 @@ def radians2degrees(angle):
     degrees = angle * 180 / math.pi
     return round(degrees, 2)
 
+# clears the draws associated to the color received in the projection
+def remove_figures(color):
+    if agent[color] is not None: 
+        if agent[color].cx: 
+            for figure in agent[color].draws:  
+                draw.delete_figure(figure)  
+        return True
+    return
+
 
 def manage_agent(frame, hsv):
     # generate masks for every agent to detect the color required
-    for color in utils.agent.keys():   
+    for color in agent.keys():   
         agnt = generate_mask(frame, hsv, color) 
-        # if an agent is detected
-        if agnt:
+
+        # if there is not agent detected, clears its draws if existed
+        if not agnt:  
+            if remove_figures(color): 
+                # clears the object
+                agent[color].set_out()  
+            
+        # if an agent is detected, clears previous draws if existed
+        elif agnt:
+            if remove_figures(color):
+                # drops draws from object
+                agent[color].draws = []
+            
             # draws a circle verifying that there is nothing in its radius
             if detect_agents(agnt): 
                 circle_color = 'red'
@@ -155,20 +178,14 @@ def manage_agent(frame, hsv):
             show_circle(frame, agnt, circle_color) 
             transform_points(frame, agnt)
             show_text(agnt)  
-        # if there is not agent detected, clears its draws if existed
-        if (not agnt) and (utils.agent[color] is not None):  
-            if utils.agent[color].cx: 
-                for figure in utils.agent[color].draws: 
-                    #print(figure)
-                    draw.delete_figure(figure) 
-                    # print('figures', color, 'deleted')
-                utils.agent[color].set_out()  
+    return
 
+# detect agents around another (this)
 def detect_agents(this):
     # verifies distance between agents
     flag = 0
     # check every object in agent dict
-    for a in utils.agent.values():
+    for a in agent.values():
         if a is not None: 
             # checks every agent different to itself and that currently exists in the world
             if a.id is not this.id: 
@@ -238,32 +255,33 @@ def transform_points(frame, agnt):
 
 # a is the agent that follows and b which is followed 
 def transform_center2get_angle(frame, a, b):
-    if utils.agent[a] and utils.agent[b]:
-        # point where I wish to go
-        if utils.agent[a].cx and utils.agent[b].cx:
-            d = get_distance(utils.agent[a].cx,  utils.agent[b].cx,  utils.agent[a].cy,  utils.agent[b].cy)
-            
-            cx, cy = utils.w2vp(utils.agent[a].cx, utils.agent[a].cy, vpc)
-            cv2.putText(frame, 'd:'+str(d), (int(cx), int(cy)), 3, 0.5, rgb_white)
+    if agent[a] and agent[b]:
+        if agent[a].cx and agent[b].cx:
+            # point where I wish to go
+            d = get_distance(agent[a].cx,  agent[b].cx,  agent[a].cy,  agent[b].cy)
             
             # transform points
-            angle = -1 * degrees2radians(utils.agent[a].direction)
-            xt = ((utils.agent[b].cx - utils.agent[a].cx) * math.cos(angle)) - ((utils.agent[b].cy - utils.agent[a].cy) * math.sin(angle))
-            yt = ((utils.agent[b].cx - utils.agent[a].cx) * math.sin(angle)) + ((utils.agent[b].cy - utils.agent[a].cy) * math.cos(angle)) 
+            angle = -1 * degrees2radians(agent[a].direction)
+            xt = ((agent[b].cx - agent[a].cx) * math.cos(angle)) - ((agent[b].cy - agent[a].cy) * math.sin(angle))
+            yt = ((agent[b].cx - agent[a].cx) * math.sin(angle)) + ((agent[b].cy - agent[a].cy) * math.cos(angle)) 
             yt = round(yt, 2)
-            print('yt', yt, 'd', d) 
+            # print('yt', yt, 'd', d) 
             dir_angle = math.asin(yt / d)
             dir_angle = radians2degrees(dir_angle)
-            print('before',dir_angle ) 
+            # print('before',dir_angle ) 
             
             if xt < 0 :
                 dir_angle = 180 - dir_angle  
             else:
                 if yt < 0:
                     dir_angle = 360 + dir_angle  
-            print('after', dir_angle)
-                
-            cx, cy = utils.w2vp(utils.agent[b].cx, utils.agent[b].cy, vpc)
+            # print('after', dir_angle)
+            
+            # shows distance
+            cx, cy = utils.w2vp(agent[a].cx, agent[a].cy, vpc)
+            cv2.putText(frame, 'd:'+str(d), (int(cx), int(cy)), 3, 0.5, rgb_white)
+            # shows angle
+            cx, cy = utils.w2vp(agent[b].cx, agent[b].cy, vpc)
             cv2.putText(frame, 'angle: '+str(dir_angle), (int(cx), int(cy)), 3, 0.5, rgb_white)
 
 
@@ -274,7 +292,6 @@ def generate_mask(frame, hsv, color):
     num_corner = 0
     corner1 = []
     corner2 = []
-    
     for count in contours:  
         # using functions to get the contour of shapes
         epsilon = 0.01 * cv2.arcLength(count, True)
@@ -297,7 +314,8 @@ def generate_mask(frame, hsv, color):
                     return corner1, corner2
                 elif num_corner == 2:
                     # reset values
-                    corner1 = corner2 = []
+                    corner1 = []
+                    corner2 = []
                     num_corner = 0
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
@@ -334,8 +352,7 @@ def generate_mask(frame, hsv, color):
                     cx2, cy2 = utils.vp2w(cx, cy, vpc)
                     vx2, vy2 = utils.vp2w(vx, vy, vpc) 
                     
-                    #distance between centroid and min angle vertex in world coordinates  
-                    #radius of agent circle
+                    #distance between centroid and min angle vertex in world coordinates to get radius
                     r = get_distance(cx2, vx2, cy2, vy2)  + 1 
                     
                     # print(cx2, cy2, vx2, vy2, r) 
@@ -344,14 +361,10 @@ def generate_mask(frame, hsv, color):
                     info = str(direction)+' | '+str(cx2)+' | '+ str(cy2)
                     cv2.putText(frame, info, (vx, vy), 3, 0.5, (0, 0, 0))  
                     
-                    # create object agent and assign values 
-                    new_agent = utils.Agent(color)
-                    new_agent.set_values(cx2, cy2, vx2, vy2, r, direction, info)
+                    # create object agent and assign values in the world  
+                    agent[color].set_values(cx2, cy2, vx2, vy2, r, direction, info)   
                     
-                    # create agent in the world
-                    global agent  
-                    utils.agent[color] = new_agent    
-                    return new_agent
+                    return agent[color]
                 else:
                     return False
     return                 
