@@ -22,28 +22,29 @@ class ViewPort:
             self.dv = v_min - v_max
         else:
             self.dv = v_max - v_min
+
     
 class Agent:
     def __init__(self, color): 
-        self.id = get_id(color)
-        self.cx = self.cy = self.direction = self.line2 = self.line1 = self.limit = self.radius = self.info = None 
-    def set_values(self, cx, cy, r, direction): 
+        self.id = get_id(color) 
+        self.draws = []
+        self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = None 
+    def set_values(self, cx, cy, vx, vy, r, direction, info): 
         self.cx = cx
         self.cy = cy 
+        self.vx = vx
+        self.vy = vy
         self.radius = r 
         self.direction = direction
-    def set_line(self, line1, line2):
-        self.line1 = line1
-        self.line2 = line2
-    def set_limit(self, limit):
-        self.limit = limit
-    def set_info(self, info):
-        self.info = info
+        self.info = info 
+    def add_draws(self, obj):
+        self.draws.append(obj)  
     def set_out(self):
-        self.cx = self.cy = self.direction = self.line2 = self.line1 = self.limit = self.radius = self.info = None    
+        self.draws = []
+        self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = None    
 
 
-#utils functions
+# utils functions
 def get_id(color):
     agent_id = 0
     for col in agent.keys():
