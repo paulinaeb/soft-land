@@ -1,0 +1,1 @@
+a = '{"blue": {"id": 1, "cx": null, "cy": null, "direction": null}, "green": {"id": 2, "cx": null, "cy": null, "direction": null}, "yellow": {"id": 3, "cx": null, "cy": null, "direction": null}}'
