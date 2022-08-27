@@ -375,7 +375,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Virtual Environment', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     recording = False
     # Event loop that reads and displays frames 
     while True:
