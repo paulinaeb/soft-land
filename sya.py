@@ -33,10 +33,12 @@ for col in agent.keys():
 # layout for first monitor
 def main_layout():
     # define the window layout
-    layout = [[sg.Text('Virtual Environment', size=(40, 1), justification='center', font='Helvetica 20')],
+    layout = [[sg.Text('Entorno Virtual', size=(40, 1), justification='center', font='Helvetica 20')],
               [sg.Image(filename='', key='image')],
-              [sg.Button('Start', size=(10, 1), font='Helvetica 14'), 
-               sg.Button('Exit', size=(10, 1),  font='Helvetica 14')]] 
+              [sg.Button('Iniciar', size=(8, 1), font='Helvetica 14'), 
+               sg.Button('Finalizar', size=(8, 1),  font='Helvetica 14'),
+               sg.Button('Objetos Virtuales', size=(15, 1),  font='Helvetica 14')
+               ]] 
     return layout
 
 # layout for second monitor
@@ -373,7 +375,7 @@ def generate_mask(frame, hsv, color):
 def main():
     sg.theme('DarkTeal4')
     # create the window and show it without the plot
-    window = sg.Window('Virtual Environment', main_layout(), element_justification='c', location=(350, 100))
+    window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
     cap = cv2.VideoCapture(1)
     recording = False
@@ -381,12 +383,12 @@ def main():
     while True:
         event, _ = window.read(timeout=20) 
         
-        if event == 'Exit' or event == sg.WIN_CLOSED:
+        if event == 'Finalizar' or event == sg.WIN_CLOSED:
             if recording:
                 cap.release()
             return
         
-        elif event == 'Start': 
+        elif event == 'Iniciar': 
             recording = True 
             for m in get_monitors():  
                 x_init = m.x 

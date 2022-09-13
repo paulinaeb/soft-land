@@ -1,8 +1,8 @@
-from sya import agent
-import json  
+from sya import agent 
 
 aux = agent 
  
+# drops unused values  
 for key, val in aux.items():
     delattr(val, 'draws')
     delattr(val, 'radius') 
@@ -11,14 +11,8 @@ for key, val in aux.items():
     delattr(val, 'vy')
     aux[key] = val.__dict__ 
      
-# obtains json str     
-obj_json = json.dumps(aux) 
-print(obj_json)
-
-file = open('test.py', 'w')
-file.write("a = '"+ obj_json+"'")
-file.close()
-  
-# deserialize info (dictionary)
-# dict_info = json.loads(obj_json)
-# print(dict_info) 
+print(aux)      
+#writes the dictionary on a text file to be used in agents 
+file = open('file.txt', 'w')
+file.write(str(aux))
+file.close() 
