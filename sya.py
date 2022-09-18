@@ -8,6 +8,9 @@ import utils
 import threading 
 from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
+import time
+import serial
+import tkinter as tk
 
 pool = ThreadPool(processes=1)
 
@@ -23,19 +26,21 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-         'green': None,
+        #  'green': None,
          'yellow': None}  
 
 # init agents with id and no attributes
 for col in agent.keys():
-    agent[col] = utils.Agent(col) 
+    agent[col] = utils.Agent(col)  
+    
     
 # layout for first monitor
 def main_layout():
     # define the window layout
     layout = [[sg.Text('Entorno Virtual', size=(40, 1), justification='center', font='Helvetica 20')],
               [sg.Image(filename='', key='image')],
-              [sg.Button('Iniciar', size=(8, 1), font='Helvetica 14'), 
+              [sg.Button('Iniciar', size=(8, 1), font='Helvetica 14', key='Iniciar'),
+               sg.pin(sg.Button('Inicializar Agentes', size=(15, 1),  font='Helvetica 14', key='_agents_', visible=False)),
                sg.Button('Finalizar', size=(8, 1),  font='Helvetica 14'),
                sg.Button('Objetos Virtuales', size=(15, 1),  font='Helvetica 14')
                ]] 
@@ -365,19 +370,76 @@ def generate_mask(frame, hsv, color):
                     
                     # create object agent and assign values in the world  
                     agent[color].set_values(cx2, cy2, vx2, vy2, r, direction, info)   
-                    
                     return agent[color]
                 else:
                     return False
     return                 
 
 
+def time_as_int():
+    return int(round(time.time() * 100)) 
+
+
+int_sec = None
+
+
+def init_agent(count):
+    # calculates positions for projection strings 
+    top_left = (int(vpv.u_max/2) + 40, int(vpv.v_max/2) + 22)
+    top_right = (int(vpv.u_max/2) - 40, int(vpv.v_max/2) - 22)
+    x = int(vpv.u_max/2)
+    y = int(vpv.v_max/2)
+    # time
+    count = count * 100
+    # will use global variable
+    global int_sec
+    # as many times as agents exists
+    for i in range(len(agent)):
+        title = draw.draw_text('Coloque el agente nº '+str(i + 1)+' en la arena', location = (x, y+50), color = 'white', font='Helvetica 20')
+        # variables to complete timer
+        int_sec = 0
+        current_time = 0 
+        start_time = time_as_int()
+        str_time = 'init'
+        aux_str = '' 
+        text = None
+        rect = None
+        # repeats until get to limit number given
+        while current_time < count:
+            current_time = time_as_int() - start_time  
+            aux_str = str_time
+            str_time = '{:02d}'.format((current_time // 100) % 60) 
+            int_sec = int(str_time)  
+            print('Inicializando...')
+            # manages and draws projection
+            if aux_str != str_time:
+                if text:
+                    draw.delete_figure(text)
+                if rect:
+                    draw.delete_figure(rect)
+                rect = draw.draw_rectangle(top_left, top_right, fill_color='black')
+                text = draw.draw_text(text = str_time, location = (x, y), color = 'white', font='Helvetica 20')
+        time.sleep(.7)
+        draw.delete_figure(text)
+        draw.draw_rectangle(top_left, top_right, fill_color='black')
+        draw.delete_figure(rect)
+        draw.delete_figure(title)
+        int_sec = None 
+    # end of loops and clearing screen
+    str_fin = 'Inicializacion terminada'
+    fin = draw.draw_text(str_fin, location = (x, y+50), color = 'white', font='Helvetica 20')
+    time.sleep(.7)
+    draw.delete_figure(fin)
+    print(str_fin)
+    return
+
+
 def main():
-    sg.theme('DarkTeal4')
+    sg.theme('Black')
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     recording = False
     # Event loop that reads and displays frames 
     while True:
@@ -415,6 +477,8 @@ def main():
             # thread
             region = pool.apply_async(generate_mask, (frame, hsv, 'black'))
             region = region.get()  
+            window['Iniciar'].Update(visible = False)
+            window['_agents_'].Update(visible = True)
             if region: 
                 # print(region)
                 min_corner, max_corner = region
@@ -426,11 +490,23 @@ def main():
                 if vpc_min and vpc_max:
                     cv2.putText(frame, (str(int(vpc_min[0]))+','+str(int(vpc_min[1]))), (int(vpc.u_min) - 10, int(vpc.v_min) + 15), 3, 0.5, rgb_white)
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
-                    # call to function to detect agents
+                                    # call to function to detect agents
                     manage_agent(frame, hsv)
                     #transform_center2get_angle(frame, 'blue', 'yellow')
+                    
+                # esto va dentro del if de arriba
+            if event == '_agents_':  
+                print('Inicializando agentes...')  
+                # num of timer
+                i = len(agent)
+                # total of secs to count
+                count_secs = 5
+                thre = threading.Thread(target = init_agent, args=(count_secs,))
+                thre.start()
             else:
-                clear_screen()        
+                # descomentar
+                # clear_screen()        
+                pass
                     
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
