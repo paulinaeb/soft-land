@@ -15,7 +15,7 @@ pool = ThreadPool(processes=1)
 
 # global variables
 # connects to gateway by serial
-# ser = serial.Serial(port='COM3', baudrate=115200, timeout=0.050)
+ser_port = None
 
 # viewport for projector
 vpv = utils.ViewPort('video')
@@ -191,7 +191,7 @@ def manage_agent(frame, hsv):
             if int_sec:
                 if count_secs >= int_sec >= 0: 
                     # enviar por serial
-                    # ser.write(('ID:'+str(agent[color].id)+' '+color).encode())
+                    # ser_port.write(('ID:'+str(agent[color].id)+' '+color).encode())
                     draw.draw_text('se encontro'+color+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
                     
             if remove_figures(color):
@@ -294,17 +294,15 @@ def transform_center2get_angle(frame, a, b):
             xt = ((agent[b].cx - agent[a].cx) * math.cos(angle)) - ((agent[b].cy - agent[a].cy) * math.sin(angle))
             yt = ((agent[b].cx - agent[a].cx) * math.sin(angle)) + ((agent[b].cy - agent[a].cy) * math.cos(angle)) 
             yt = round(yt, 2)
-            # print('yt', yt, 'd', d) 
+
             dir_angle = math.asin(yt / d)
-            dir_angle = radians2degrees(dir_angle)
-            # print('before',dir_angle ) 
+            dir_angle = radians2degrees(dir_angle) 
             
             if xt < 0 :
                 dir_angle = 180 - dir_angle  
             else:
                 if yt < 0:
-                    dir_angle = 360 + dir_angle  
-            # print('after', dir_angle)
+                    dir_angle = 360 + dir_angle   
             
             # shows distance
             cx, cy = utils.w2vp(agent[a].cx, agent[a].cy, vpc)
@@ -517,15 +515,29 @@ def main():
                     
                 # esto va dentro del if de arriba
             if event == '_agents_':  
-                print('Inicializando agentes...')   
+                # serial connection variable
+                global serial
                 # set global values used multiple times to print in projection gui
                 global vpv_mid_x
                 global vpv_mid_y
-                vpv_mid_x = int(vpv.u_max/2)
-                vpv_mid_y = int(vpv.v_max/2)
-                # start of thread that init timer
-                thre = threading.Thread(target = init_agent, args=(count_secs,))
-                thre.start()
+                try:
+                    # tries serial connection before start initialization
+                    ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)
+                    ser_port.close()
+                    ser_port.open()
+                    # ser_port.write('works'.encode())
+                    # read_val = ser_port.read()
+                    # print(read_val) 
+                    # gets the middle of the projection screen
+                    vpv_mid_x = int(vpv.u_max/2)
+                    vpv_mid_y = int(vpv.v_max/2)
+                    print('Inicializando agentes...')   
+                    # start of thread that init timer
+                    thre = threading.Thread(target = init_agent, args=(count_secs,))
+                    thre.start()
+                except serial.SerialException:
+                    print('There was found a problem with your serial port connection. Please verify and try again.')
+
             else:
                 # descomentar
                 # clear_screen()        
