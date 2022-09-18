@@ -14,6 +14,8 @@ import serial
 pool = ThreadPool(processes=1)
 
 # global variables
+# connects to gateway by serial
+ser = serial.Serial(port='COM3', baudrate=115200, timeout=0.050)
 
 # viewport for projector
 vpv = utils.ViewPort('video')
@@ -184,6 +186,7 @@ def manage_agent(frame, hsv):
                     x = int(vpv.u_max/2)
                     y = int(vpv.v_max/2)
                     # enviar por serial
+                    # ser.write(('ID:'+str(agent[color].id)+' '+color).encode())
                     draw.draw_text('se encontro'+color+str(agent[color].id), location=(x, y+80), color = 'white', font='Helvetica 20')
                     
             if remove_figures(color):
