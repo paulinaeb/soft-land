@@ -9,10 +9,11 @@ import threading
 from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 import time
-import serial
-import tkinter as tk
+import serial 
 
 pool = ThreadPool(processes=1)
+
+# global variables
 
 # viewport for projector
 vpv = utils.ViewPort('video')
@@ -33,6 +34,10 @@ agent = {'blue': None,
 for col in agent.keys():
     agent[col] = utils.Agent(col)  
     
+# for timer
+int_sec = None
+# total of secs to count
+count_secs = 60
     
 # layout for first monitor
 def main_layout():
@@ -139,7 +144,7 @@ def get_distance(x1, x2, y1, y2):
     d = round(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), 2)
     return d
 
-        
+# conversion of angle units below
 def degrees2radians(angle):
     radians = angle / 180 * math.pi
     return round(radians, 2) 
@@ -172,6 +177,15 @@ def manage_agent(frame, hsv):
             
         # if an agent is detected, clears previous draws if existed
         elif agnt:
+            
+            # start of init agent management validating time
+            if int_sec:
+                if count_secs >= int_sec >= 0:
+                    x = int(vpv.u_max/2)
+                    y = int(vpv.v_max/2)
+                    # enviar por serial
+                    draw.draw_text('se encontro'+color+str(agent[color].id), location=(x, y+80), color = 'white', font='Helvetica 20')
+                    
             if remove_figures(color):
                 # drops draws from object
                 agent[color].draws = []
@@ -380,9 +394,6 @@ def time_as_int():
     return int(round(time.time() * 100)) 
 
 
-int_sec = None
-
-
 def init_agent(count):
     # calculates positions for projection strings 
     top_left = (int(vpv.u_max/2) + 40, int(vpv.v_max/2) + 22)
@@ -490,7 +501,7 @@ def main():
                 if vpc_min and vpc_max:
                     cv2.putText(frame, (str(int(vpc_min[0]))+','+str(int(vpc_min[1]))), (int(vpc.u_min) - 10, int(vpc.v_min) + 15), 3, 0.5, rgb_white)
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
-                                    # call to function to detect agents
+                    # call to function to detect agents
                     manage_agent(frame, hsv)
                     #transform_center2get_angle(frame, 'blue', 'yellow')
                     
@@ -499,8 +510,7 @@ def main():
                 print('Inicializando agentes...')  
                 # num of timer
                 i = len(agent)
-                # total of secs to count
-                count_secs = 5
+
                 thre = threading.Thread(target = init_agent, args=(count_secs,))
                 thre.start()
             else:
