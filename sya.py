@@ -15,13 +15,20 @@ pool = ThreadPool(processes=1)
 
 # global variables
 # connects to gateway by serial
-ser = serial.Serial(port='COM3', baudrate=115200, timeout=0.050)
+# ser = serial.Serial(port='COM3', baudrate=115200, timeout=0.050)
 
 # viewport for projector
 vpv = utils.ViewPort('video')
 
 # viewport for camera
 vpc = utils.ViewPort('camera')
+
+# for drawing in init agent
+vpv_mid_x = None
+vpv_mid_y = None
+
+# handler
+event = None
 
 # rgb colors for opencv
 rgb_black = (0, 0, 0)
@@ -182,12 +189,10 @@ def manage_agent(frame, hsv):
             
             # start of init agent management validating time
             if int_sec:
-                if count_secs >= int_sec >= 0:
-                    x = int(vpv.u_max/2)
-                    y = int(vpv.v_max/2)
+                if count_secs >= int_sec >= 0: 
                     # enviar por serial
                     # ser.write(('ID:'+str(agent[color].id)+' '+color).encode())
-                    draw.draw_text('se encontro'+color+str(agent[color].id), location=(x, y+80), color = 'white', font='Helvetica 20')
+                    draw.draw_text('se encontro'+color+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
                     
             if remove_figures(color):
                 # drops draws from object
@@ -399,17 +404,15 @@ def time_as_int():
 
 def init_agent(count):
     # calculates positions for projection strings 
-    top_left = (int(vpv.u_max/2) + 40, int(vpv.v_max/2) + 22)
-    top_right = (int(vpv.u_max/2) - 40, int(vpv.v_max/2) - 22)
-    x = int(vpv.u_max/2)
-    y = int(vpv.v_max/2)
+    top_left = (vpv_mid_x + 40, vpv_mid_y + 22)
+    top_right = (vpv_mid_x - 40, vpv_mid_y - 22) 
     # time
     count = count * 100
     # will use global variable
     global int_sec
     # as many times as agents exists
     for i in range(len(agent)):
-        title = draw.draw_text('Coloque el agente nº '+str(i + 1)+' en la arena', location = (x, y+50), color = 'white', font='Helvetica 20')
+        title = draw.draw_text('Coloque el agente nº '+str(i + 1)+' en la arena', location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
         # variables to complete timer
         int_sec = 0
         current_time = 0 
@@ -420,6 +423,9 @@ def init_agent(count):
         rect = None
         # repeats until get to limit number given
         while current_time < count:
+            # validates main gui
+            if event == 'Finalizar' or event == sg.WIN_CLOSED: 
+                return
             current_time = time_as_int() - start_time  
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
@@ -432,7 +438,7 @@ def init_agent(count):
                 if rect:
                     draw.delete_figure(rect)
                 rect = draw.draw_rectangle(top_left, top_right, fill_color='black')
-                text = draw.draw_text(text = str_time, location = (x, y), color = 'white', font='Helvetica 20')
+                text = draw.draw_text(text = str_time, location = (vpv_mid_x, vpv_mid_y), color = 'white', font='Helvetica 20')
         time.sleep(.7)
         draw.delete_figure(text)
         draw.draw_rectangle(top_left, top_right, fill_color='black')
@@ -441,7 +447,7 @@ def init_agent(count):
         int_sec = None 
     # end of loops and clearing screen
     str_fin = 'Inicializacion terminada'
-    fin = draw.draw_text(str_fin, location = (x, y+50), color = 'white', font='Helvetica 20')
+    fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
     time.sleep(.7)
     draw.delete_figure(fin)
     print(str_fin)
@@ -457,6 +463,7 @@ def main():
     recording = False
     # Event loop that reads and displays frames 
     while True:
+        global event
         event, _ = window.read(timeout=20) 
         
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -510,10 +517,13 @@ def main():
                     
                 # esto va dentro del if de arriba
             if event == '_agents_':  
-                print('Inicializando agentes...')  
-                # num of timer
-                i = len(agent)
-
+                print('Inicializando agentes...')   
+                # set global values used multiple times to print in projection gui
+                global vpv_mid_x
+                global vpv_mid_y
+                vpv_mid_x = int(vpv.u_max/2)
+                vpv_mid_y = int(vpv.v_max/2)
+                # start of thread that init timer
                 thre = threading.Thread(target = init_agent, args=(count_secs,))
                 thre.start()
             else:
