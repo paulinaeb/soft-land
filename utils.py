@@ -11,7 +11,7 @@ agent = {'blue': None,
 class ViewPort:
     def __init__(self, name):
         self.name = name
-        self.u_min = self.u_max = self.v_min = self.v_max = self.du = self.dv = None
+        self.u_min = self.u_max = self.v_min = self.v_max = self.du = self.dv =  None 
     def set_values(self,  u_min, v_min, u_max, v_max):
         self.u_min = u_min
         self.u_max = u_max     
@@ -28,6 +28,7 @@ class Agent:
     def __init__(self, color): 
         self.id = get_id(color) 
         self.draws = []
+        self.found = False
         self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = None 
     def set_values(self, cx, cy, vx, vy, r, direction, info): 
         self.cx = cx

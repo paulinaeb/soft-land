@@ -16,7 +16,8 @@ pool = ThreadPool(processes=1)
 # global variables
 # connects to gateway by serial
 ser_port = None
-
+found = None
+msg = None
 # viewport for projector
 vpv = utils.ViewPort('video')
 
@@ -36,7 +37,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-        #  'green': None,
+         'green': None,
          'yellow': None}  
 
 # init agents with id and no attributes
@@ -189,10 +190,15 @@ def manage_agent(frame, hsv):
             
             # start of init agent management validating time
             if int_sec:
-                if count_secs >= int_sec >= 0: 
+                if count_secs >= int_sec >= 0 and agent[color].found == False: 
                     # enviar por serial
-                    # ser_port.write(('ID:'+str(agent[color].id)+' '+color).encode())
-                    draw.draw_text('se encontro'+color+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
+                    agent[color].found = True
+                    ser_port.write((str(agent[color].id)).encode())
+                    print('Se encontró agente: '+color+' ID: '+str(agent[color].id))
+                    global msg
+                    msg = draw.draw_text('Se encontró agente: '+color+' ID: '+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
+                    global found 
+                    found = True 
                     
             if remove_figures(color):
                 # drops draws from object
@@ -410,6 +416,8 @@ def init_agent(count):
     global int_sec
     # as many times as agents exists
     for i in range(len(agent)):
+        global found
+        found = False
         title = draw.draw_text('Coloque el agente nº '+str(i + 1)+' en la arena', location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
         # variables to complete timer
         int_sec = 0
@@ -419,8 +427,8 @@ def init_agent(count):
         aux_str = '' 
         text = None
         rect = None
-        # repeats until get to limit number given
-        while current_time < count:
+        # repeats until get to limit number given or until an agent is found
+        while current_time < count and found == False:
             # validates main gui
             if event == 'Finalizar' or event == sg.WIN_CLOSED: 
                 return
@@ -428,7 +436,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            print('Inicializando...')
+            # print('Inicializando...')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -437,16 +445,18 @@ def init_agent(count):
                     draw.delete_figure(rect)
                 rect = draw.draw_rectangle(top_left, top_right, fill_color='black')
                 text = draw.draw_text(text = str_time, location = (vpv_mid_x, vpv_mid_y), color = 'white', font='Helvetica 20')
-        time.sleep(.7)
+        time.sleep(.8)
         draw.delete_figure(text)
         draw.draw_rectangle(top_left, top_right, fill_color='black')
         draw.delete_figure(rect)
         draw.delete_figure(title)
+        if msg:
+            draw.delete_figure(msg)
         int_sec = None 
     # end of loops and clearing screen
     str_fin = 'Inicializacion terminada'
     fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
-    time.sleep(.7)
+    time.sleep(.8)
     draw.delete_figure(fin)
     print(str_fin)
     return
@@ -457,7 +467,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     recording = False
     # Event loop that reads and displays frames 
     while True:
@@ -513,41 +523,39 @@ def main():
                     manage_agent(frame, hsv)
                     #transform_center2get_angle(frame, 'blue', 'yellow')
                     
-                # esto va dentro del if de arriba
-            if event == '_agents_':  
-                # serial connection variable
-                global serial
-                # set global values used multiple times to print in projection gui
-                global vpv_mid_x
-                global vpv_mid_y
-                try:
-                    # tries serial connection before start initialization
-                    ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)
-                    ser_port.close()
-                    ser_port.open()
-                    # ser_port.write('works'.encode())
-                    # read_val = ser_port.read()
-                    # print(read_val) 
-                    # gets the middle of the projection screen
-                    vpv_mid_x = int(vpv.u_max/2)
-                    vpv_mid_y = int(vpv.v_max/2)
-                    print('Inicializando agentes...')   
-                    # start of thread that init timer
-                    thre = threading.Thread(target = init_agent, args=(count_secs,))
-                    thre.start()
-                except serial.SerialException:
-                    print('There was found a problem with your serial port connection. Please verify and try again.')
-
+                    # esto va dentro del if de arriba
+                    if event == '_agents_':  
+                        # serial connection variable
+                        global ser_port
+                        # set global values used multiple times to print in projection gui
+                        global vpv_mid_x
+                        global vpv_mid_y
+                        try:
+                            # tries serial connection before start initialization
+                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1) 
+                            # ser_port.write('works'.encode())  
+                            # read_val = ser_port.readline()
+                            # print('read_val', read_val.decode()) 
+                                
+                            # gets the middle of the projection screen
+                            vpv_mid_x = int(vpv.u_max/2)
+                            vpv_mid_y = int(vpv.v_max/2)
+                            print('Inicializando agentes...')   
+                            # start of thread that init timer
+                            thre = threading.Thread(target = init_agent, args=(count_secs,))
+                            thre.start()
+                            # handles exception
+                        except serial.SerialException:
+                            print('There was found a problem with your serial port connection. Please verify and try again.')
             else:
                 # descomentar
                 # clear_screen()        
                 pass
-                    
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
-            
+             
 
-if __name__=='__main__':
+if __name__=='__main__': 
     t1 = threading.Thread(target=main)
     t1.start()
