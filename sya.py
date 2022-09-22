@@ -5,6 +5,7 @@ import numpy as np
 import math
 import data
 import utils
+import com
 import threading 
 from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
@@ -187,13 +188,15 @@ def manage_agent(frame, hsv):
             
         # if an agent is detected, clears previous draws if existed
         elif agnt:
-            
             # start of init agent management validating time
             if int_sec:
                 if count_secs >= int_sec >= 0 and agent[color].found == False: 
-                    # enviar por serial
+                    # send by serial
                     agent[color].found = True
-                    ser_port.write((str(agent[color].id)).encode())
+                    # serialize message to send, from sand to all (command = Info ID) with one parameter
+                    ser_msg = com.serialize('0', 'F', 'II', [str(agent[color].id)])
+                    print(ser_msg)
+                    ser_port.write((ser_msg+',').encode())
                     print('Se encontró agente: '+color+' ID: '+str(agent[color].id))
                     global msg
                     msg = draw.draw_text('Se encontró agente: '+color+' ID: '+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
@@ -423,7 +426,7 @@ def init_agent(count):
         int_sec = 0
         current_time = 0 
         start_time = time_as_int()
-        str_time = 'init'
+        str_time = ''
         aux_str = '' 
         text = None
         rect = None
@@ -436,7 +439,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            # print('Inicializando...')
+            print('Inicializando...')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -446,12 +449,24 @@ def init_agent(count):
                 rect = draw.draw_rectangle(top_left, top_right, fill_color='black')
                 text = draw.draw_text(text = str_time, location = (vpv_mid_x, vpv_mid_y), color = 'white', font='Helvetica 20')
         time.sleep(.8)
-        draw.delete_figure(text)
+        try:
+            draw.delete_figure(text)
+        except:
+            pass
         draw.draw_rectangle(top_left, top_right, fill_color='black')
-        draw.delete_figure(rect)
-        draw.delete_figure(title)
+        try:
+            draw.delete_figure(rect)
+        except:
+            pass
+        try:
+            draw.delete_figure(title)
+        except: 
+            pass
         if msg:
-            draw.delete_figure(msg)
+            try:
+                draw.delete_figure(msg)
+            except:
+                pass
         int_sec = None 
     # end of loops and clearing screen
     str_fin = 'Inicializacion terminada'
@@ -532,8 +547,7 @@ def main():
                         global vpv_mid_y
                         try:
                             # tries serial connection before start initialization
-                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1) 
-                            # ser_port.write('works'.encode())  
+                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  
                             # read_val = ser_port.readline()
                             # print('read_val', read_val.decode()) 
                                 
