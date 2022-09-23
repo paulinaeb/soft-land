@@ -1,14 +1,13 @@
 # import serial
-
-# d = destiny
 # f = source
+# d = destiny
 # c = command 
 # p = list of params or variable with one param
-def serialize(d, f, c, p):
+def serialize(f, d, c, p):
     # num of params passed
     n_param = len(p) 
     # header of message
-    msg = d + f + c 
+    msg = f + d + c 
     # size of params str with delimiter (/)
     size = n_param
     if (size > 0):
@@ -36,6 +35,50 @@ def serialize(d, f, c, p):
     #     # no params needed 
     return msg
 
+class Resp:
+    def __init__(self):
+        self.d = self.f = self.c = None
+        self.p = []
+    def set_header(self, d, f, c):
+        self.d = d 
+        self.f = f 
+        self.c = c
+    def add_p(self, param):
+        self.p.append(param)
+    
+        
+obj_req = Resp()
+
+msg = '01GP6.70/0ana/01/0';
+
+def deserialize_msg(msg): 
+    obj_req.set_header(msg[0], msg[1], msg[2] + msg[3])
+    str_p = msg[4:]
+    limit = str_p.count('/')
+    if limit > 0:
+        #  insert params into array
+        index = 0
+        aux = 0
+        for i in range(limit):
+            if i == 0: 
+                index = str_p.find('/') 
+                obj_req.add_p(str_p[:index])
+            else:
+                index = str_p.find('/', index + 1)
+                obj_req.add_p(str_p[aux + 1:index])
+            aux = index
+            flag = 0 
+            for char in range (len(obj_req.p[i])):
+                # checks if num or str for every char 
+                if not (((obj_req.p[i][char] >= '0') and (obj_req.p[i][char] <= '9')) or (obj_req.p[i][char] =='.')):
+                    flag += 1
+            # if the param is a str - remove 0
+            if flag > 0:
+                obj_req.p[i] = obj_req.p[i].replace('0',''); 
+        print(obj_req.p)
+    return 
+
+deserialize_msg(msg)
 # ser_msg = serialize('0', 'F', 'II', ['1'])
 # print(ser_msg)
 # ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  

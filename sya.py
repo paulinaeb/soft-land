@@ -39,7 +39,8 @@ rgb_white = (255, 255, 255)
 # colors of agent triangles
 agent = {'blue': None,
          'green': None,
-         'yellow': None}  
+        #  'yellow': None
+        }  
 
 # init agents with id and no attributes
 for col in agent.keys():
@@ -48,7 +49,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 60
+count_secs = 35
     
 # layout for first monitor
 def main_layout():
