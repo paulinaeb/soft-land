@@ -3,16 +3,34 @@
 # d = destiny
 # c = command 
 # p = list of params or variable with one param
-def serialize(f, d, c, p):
+
+class Resp:
+    def __init__(self):
+        self.d = self.f = self.c = None
+        self.p = []
+    def set_header(self, d, f, c):
+        self.d = d 
+        self.f = f 
+        self.c = c
+    def set_values(self, d, f, c, p):
+        self.d = d 
+        self.f = f 
+        self.c = c
+        self.p = p
+    def add_p(self, param):
+        self.p.append(param) 
+        
+
+def serialize(obj_resp):
     # num of params passed
-    n_param = len(p) 
+    n_param = len(obj_resp.p) 
     # header of message
-    msg = f + d + c 
+    msg = obj_resp.f + obj_resp.d + obj_resp.c 
     # size of params str with delimiter (/)
     size = n_param
     if (size > 0):
         # adds the size of each param
-        for obj in p:
+        for obj in obj_resp.p:
             size += len(obj)
         # define the number of spaces to be filled with '0'
         num_fill = 14 - size 
@@ -20,7 +38,7 @@ def serialize(f, d, c, p):
         n_each = num_fill / n_param 
         if num_fill >= 0: 
             if n_param >= 1: 
-                for obj in p:
+                for obj in obj_resp.p:
                     msg += obj + '/'
                     for i in range(int(n_each)):
                         msg += '0' 
@@ -35,23 +53,19 @@ def serialize(f, d, c, p):
     #     # no params needed 
     return msg
 
-class Resp:
-    def __init__(self):
-        self.d = self.f = self.c = None
-        self.p = []
-    def set_header(self, d, f, c):
-        self.d = d 
-        self.f = f 
-        self.c = c
-    def add_p(self, param):
-        self.p.append(param)
-    
+# obj_resp = Resp()
+# obj_resp.set_values('0', 'F', 'II', ['1'])
+# ser_msg = serialize(obj_resp)
+# print(ser_msg)
+
+# ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  
+# ser_port.write((ser_msg+',').encode())
         
-obj_req = Resp()
+# obj_req = Resp()
 
-msg = '01GP6.70/0ana/01/0';
+# msg = '01GP6.70/0ana/01/0';
 
-def deserialize_msg(msg): 
+def deserialize(msg, obj_req): 
     obj_req.set_header(msg[0], msg[1], msg[2] + msg[3])
     str_p = msg[4:]
     limit = str_p.count('/')
@@ -78,8 +92,4 @@ def deserialize_msg(msg):
         print(obj_req.p)
     return 
 
-deserialize_msg(msg)
-# ser_msg = serialize('0', 'F', 'II', ['1'])
-# print(ser_msg)
-# ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  
-# ser_port.write((ser_msg+',').encode())
+# deserialize(msg)

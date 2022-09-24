@@ -19,6 +19,11 @@ pool = ThreadPool(processes=1)
 ser_port = None
 found = None
 msg = None
+
+# obj for serial communication
+obj_resp = com.Resp()
+obj_req = com.Resp()
+
 # viewport for projector
 vpv = utils.ViewPort('video')
 
@@ -195,7 +200,8 @@ def manage_agent(frame, hsv):
                     # send by serial
                     agent[color].found = True
                     # serialize message to send, from sand to all (command = Info ID) with one parameter
-                    ser_msg = com.serialize('0', 'F', 'II', [str(agent[color].id)])
+                    obj_resp.set_values('0', 'F', 'II', [str(agent[color].id)])
+                    ser_msg = com.serialize(obj_resp)
                     print(ser_msg)
                     ser_port.write((ser_msg+',').encode())
                     print('Se encontró agente: '+color+' ID: '+str(agent[color].id))
@@ -483,7 +489,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     recording = False
     # Event loop that reads and displays frames 
     while True:
