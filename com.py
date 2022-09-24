@@ -67,29 +67,29 @@ def serialize(obj_resp):
 
 def deserialize(msg, obj_req): 
     obj_req.set_header(msg[0], msg[1], msg[2] + msg[3])
-    str_p = msg[4:]
-    limit = str_p.count('/')
-    if limit > 0:
-        #  insert params into array
-        index = 0
-        aux = 0
-        for i in range(limit):
-            if i == 0: 
-                index = str_p.find('/') 
-                obj_req.add_p(str_p[:index])
-            else:
-                index = str_p.find('/', index + 1)
-                obj_req.add_p(str_p[aux + 1:index])
-            aux = index
-            flag = 0 
-            for char in range (len(obj_req.p[i])):
-                # checks if num or str for every char 
-                if not (((obj_req.p[i][char] >= '0') and (obj_req.p[i][char] <= '9')) or (obj_req.p[i][char] =='.')):
-                    flag += 1
-            # if the param is a str - remove 0
-            if flag > 0:
-                obj_req.p[i] = obj_req.p[i].replace('0',''); 
-        print(obj_req.p)
+    if len(msg) > 4:
+        str_p = msg[4:]
+        limit = str_p.count('/')
+        if limit > 0:
+            #  insert params into array
+            index = 0
+            aux = 0
+            for i in range(limit):
+                if i == 0: 
+                    index = str_p.find('/') 
+                    obj_req.add_p(str_p[:index])
+                else:
+                    index = str_p.find('/', index + 1)
+                    obj_req.add_p(str_p[aux + 1:index])
+                aux = index
+                flag = 0 
+                for char in range (len(obj_req.p[i])):
+                    # checks if num or str for every char 
+                    if not (((obj_req.p[i][char] >= '0') and (obj_req.p[i][char] <= '9')) or (obj_req.p[i][char] =='.')):
+                        flag += 1
+                # if the param is a str - remove 0
+                if flag > 0:
+                    obj_req.p[i] = obj_req.p[i].replace('0',''); 
     return 
 
 # deserialize(msg)
