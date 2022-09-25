@@ -9,13 +9,11 @@ class Resp:
         self.d = self.f = self.c = None
         self.p = []
     def set_header(self, f, d, c):
-        self.d = d 
         self.f = f 
+        self.d = d 
         self.c = c
     def set_values(self, f, d, c, p):
-        self.f = f 
-        self.d = d 
-        self.c = c
+        self.set_header(f, d, c)
         self.p = p
     def add_p(self, param):
         self.p.append(param) 
