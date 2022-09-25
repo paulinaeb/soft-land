@@ -200,13 +200,11 @@ def manage_agent(frame, hsv):
                     # send by serial
                     agent[color].found = True
                     # serialize message to send, from sand to all (command = Info ID) with one parameter
-                    obj_resp.set_values('0', 'F', 'II', [str(agent[color].id)])
-                    ser_msg = com.serialize(obj_resp)
-                    print(ser_msg)
-                    ser_port.write((ser_msg+',').encode())
-                    print('Se encontró agente: '+color+' ID: '+str(agent[color].id))
+                    send_msg('0', 'F', 'II', [str(agent[color].id)]) 
+                    str_found = 'Se encontró agente: '+color+' ID: '+str(agent[color].id)
+                    print(str_found)
                     global msg
-                    msg = draw.draw_text('Se encontró agente: '+color+' ID: '+str(agent[color].id), location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
+                    msg = draw.draw_text(str_found, location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
                     global found 
                     found = True 
                     
@@ -475,13 +473,29 @@ def init_agent(count):
             except:
                 pass
         int_sec = None 
-    # end of loops and clearing screen
+    # calculates num of agents initialized
+    num_agents = 0
+    for ag in agent.values():
+        if ag:
+            if ag.found:
+                num_agents += 1
+    # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
+    send_msg('0', 'F', 'AI', [str(num_agents)])
+    # end of loop and clearing screen
     str_fin = 'Inicializacion terminada'
     fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
     time.sleep(.8)
     draw.delete_figure(fin)
     print(str_fin)
+    print('Number of agents', str(num_agents))
     return
+
+# sets values to response object, serializes, encodes and sends message by serial
+def send_msg(f, d, c, p):
+    obj_resp.set_values(f, d, c, p)
+    ser_msg = com.serialize(obj_resp)
+    ser_port.write((ser_msg+',').encode())
+    print('Sent by serial:', ser_msg)
 
 
 def main():
