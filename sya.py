@@ -510,6 +510,14 @@ def read_msg():
         print('read by serial '+msg_read)
         com.deserialize(msg_read, obj_req)
         print(obj_req.__dict__)
+        if obj_req.d == '0':
+            for val in agent.values():
+                if (val.found is True) and (str(val.id) == obj_req.f):
+                    print('entra')
+                    print(val.__dict__) 
+                    # type of commands here...
+                    if obj_req.c == 'GP':
+                        send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
     return
 
 
