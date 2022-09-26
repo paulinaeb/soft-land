@@ -507,13 +507,12 @@ def read_msg():
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read: 
-        print('read by serial '+msg_read)
         com.deserialize(msg_read, obj_req)
+        print('read')
         print(obj_req.__dict__)
         if obj_req.d == '0':
             for val in agent.values():
                 if (val.found is True) and (str(val.id) == obj_req.f):
-                    print('entra')
                     print(val.__dict__) 
                     # type of commands here...
                     if obj_req.c == 'GP':
