@@ -6,7 +6,7 @@
 
 class Resp:
     def __init__(self):
-        self.d = self.f = self.c = None
+        self.f = self.d = self.c = None
         self.p = []
     def set_header(self, f, d, c):
         self.f = f 
