@@ -12,6 +12,7 @@ class Resp:
         self.f = f 
         self.d = d 
         self.c = c
+        self.p = []
     def set_values(self, f, d, c, p):
         self.set_header(f, d, c)
         self.p = p

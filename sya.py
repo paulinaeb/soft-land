@@ -19,6 +19,7 @@ pool = ThreadPool(processes=1)
 ser_port = None
 found = None
 msg = None
+num_agents = 0
 
 # obj for serial communication
 obj_resp = com.Resp()
@@ -474,13 +475,11 @@ def init_agent(count):
                 pass
         int_sec = None 
     # calculates num of agents initialized
-    num_agents = 0
+    global num_agents
     for ag in agent.values():
         if ag:
             if ag.found:
                 num_agents += 1
-    # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
-    send_msg('0', 'F', 'AI', [str(num_agents)])
     # end of loop and clearing screen
     str_fin = 'Inicializacion terminada'
     fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
@@ -488,6 +487,12 @@ def init_agent(count):
     draw.delete_figure(fin)
     print(str_fin)
     print('Number of agents', str(num_agents))
+    # manage communication
+    # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
+    send_msg('0', 'F', 'AI', [str(num_agents)])
+    if num_agents > 0:
+        while event != 'Finalizar' and event != sg.WIN_CLOSED:
+            read_msg()
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
@@ -496,6 +501,16 @@ def send_msg(f, d, c, p):
     ser_msg = com.serialize(obj_resp)
     ser_port.write((ser_msg+',').encode())
     print('Sent by serial:', ser_msg)
+
+
+def read_msg():
+    read_val = ser_port.readline()
+    msg_read = read_val.decode()
+    if msg_read: 
+        print('read by serial '+msg_read)
+        com.deserialize(msg_read, obj_req)
+        print(obj_req.__dict__)
+    return
 
 
 def main():
