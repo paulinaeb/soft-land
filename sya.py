@@ -44,7 +44,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-         'green': None,
+        #  'green': None,
         #  'yellow': None
         }  
 
@@ -55,7 +55,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 35
+count_secs = 10
     
 # layout for first monitor
 def main_layout():
@@ -507,16 +507,30 @@ def read_msg():
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read: 
-        com.deserialize(msg_read, obj_req)
         print('read')
-        print(obj_req.__dict__)
-        if obj_req.d == '0':
-            for val in agent.values():
-                if (val.found is True) and (str(val.id) == obj_req.f):
-                    print(val.__dict__) 
-                    # type of commands here...
-                    if obj_req.c == 'GP':
-                        send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
+        print(msg_read)
+        if len(msg_read) >= 4:
+            com.deserialize(msg_read, obj_req)
+            print(obj_req.__dict__)
+            if obj_req.d == '0':
+                for val in agent.values():
+                    if (val.found is True) and (str(val.id) == obj_req.f):
+                        print(val.__dict__) 
+                        # type of commands here...
+                        if obj_req.c == 'GP':
+                            for i in range(20):
+                                print(i, 'trying to send pos')
+                                if val.cx:
+                                    send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
+                                    break
+                        elif obj_req.c == 'GD':
+                            i = 0
+                            while True:
+                                print(i, 'trying to send angle', val.direction)
+                                i+=1
+                                if val.cx:
+                                    send_msg('0', obj_req.f, 'GD', [str(val.direction)])
+                                    break      
     return
 
 
@@ -525,7 +539,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     recording = False
     # Event loop that reads and displays frames 
     while True:
