@@ -44,7 +44,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-        #  'green': None,
+         'green': None,
         #  'yellow': None
         }  
 
