@@ -11,6 +11,7 @@ from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 import time
 import serial 
+from datetime import datetime
 
 pool = ThreadPool(processes=1)
 
@@ -44,7 +45,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-         'green': None,
+        #  'green': None,
         #  'yellow': None
         }  
 
@@ -201,7 +202,7 @@ def manage_agent(frame, hsv):
                     # send by serial
                     agent[color].found = True
                     # serialize message to send, from sand to all (command = Info ID) with one parameter
-                    send_msg('0', 'F', 'II', [str(agent[color].id)]) 
+                    send_msg('0', 'F', 'II', [str(agent[color].id)])
                     str_found = 'Se encontró agente: '+color+' ID: '+str(agent[color].id)
                     print(str_found)
                     global msg
@@ -489,8 +490,8 @@ def init_agent(count):
     print('Number of agents', str(num_agents))
     # manage communication
     # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
-    send_msg('0', 'F', 'AI', [str(num_agents)])
     if num_agents > 0:
+        send_msg('0', 'F', 'AI', [str(num_agents)])
         while event != 'Finalizar' and event != sg.WIN_CLOSED:
             read_msg()
     return
@@ -502,13 +503,21 @@ def send_msg(f, d, c, p):
     ser_port.write((ser_msg+',').encode())
     print('Sent by serial:', ser_msg)
 
+sent=0
 
 def read_msg():
+    global sent
     read_val = ser_port.readline()
     msg_read = read_val.decode()
-    if msg_read: 
+    if msg_read:
+        if (msg_read == 'done'):
+            rec = time_as_int()
+            t = (rec - sent) 
+            t = '{:02d}.{:02d}'.format( (t // 100) % 60, t % 100)
+            print('diff time', t)
+            return
         print('read')
-        print(msg_read)
+        print(msg_read) 
         if len(msg_read) >= 4:
             com.deserialize(msg_read, obj_req)
             print(obj_req.__dict__)
@@ -518,14 +527,18 @@ def read_msg():
                         print(val.__dict__) 
                         # type of commands here...
                         if obj_req.c == 'GP':
-                            for i in range(20):
-                                print(i, 'trying to send pos')
+                            i = 0
+                            while event != 'Finalizar' or event != sg.WIN_CLOSED:
+                                print(i, 'trying to send pos', val.cx, val.cy)
+                                i+=1
                                 if val.cx:
                                     send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
+                                    # global sent  
+                                    sent = time_as_int()
                                     break
                         elif obj_req.c == 'GD':
                             i = 0
-                            while True:
+                            while event != 'Finalizar' or event != sg.WIN_CLOSED:
                                 print(i, 'trying to send angle', val.direction)
                                 i+=1
                                 if val.cx:
