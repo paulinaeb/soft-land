@@ -1,4 +1,5 @@
 # import serial
+# import time
 # f = source
 # d = destiny
 # c = command 
@@ -57,8 +58,23 @@ def serialize(obj_resp):
 # ser_msg = serialize(obj_resp)
 # print(ser_msg)
 
-# ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  
-# ser_port.write((ser_msg+',').encode())
+# def time_as_int():
+#     return int(round(time.time() * 100)) 
+
+# ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.01)  
+# sent = time_as_int()
+# ser_port.write(('ping,').encode())
+# print('ping sent')
+# while True:
+#     read_val = ser_port.readline()
+#     msg_read = read_val.decode()
+#     if msg_read:
+#         rec = time_as_int()
+#         t = (rec - sent) 
+#         t = '{:02d}.{:02d}'.format( (t // 100) % 60, t % 100)
+#         print('diff time', t)
+#         print('read ',msg_read)
+#         break
         
 # obj_req = Resp()
 

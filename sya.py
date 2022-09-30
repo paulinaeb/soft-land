@@ -11,7 +11,6 @@ from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 import time
 import serial 
-from datetime import datetime
 
 pool = ThreadPool(processes=1)
 
@@ -503,19 +502,11 @@ def send_msg(f, d, c, p):
     ser_port.write((ser_msg+',').encode())
     print('Sent by serial:', ser_msg)
 
-sent=0
 
 def read_msg():
-    global sent
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read:
-        if (msg_read == 'done'):
-            rec = time_as_int()
-            t = (rec - sent) 
-            t = '{:02d}.{:02d}'.format( (t // 100) % 60, t % 100)
-            print('diff time', t)
-            return
         print('read')
         print(msg_read) 
         if len(msg_read) >= 4:
@@ -528,22 +519,24 @@ def read_msg():
                         # type of commands here...
                         if obj_req.c == 'GP':
                             i = 0
-                            while event != 'Finalizar' or event != sg.WIN_CLOSED:
+                            while True:
                                 print(i, 'trying to send pos', val.cx, val.cy)
                                 i+=1
                                 if val.cx:
                                     send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
-                                    # global sent  
-                                    sent = time_as_int()
+                                    break
+                                if event == 'Finalizar' or event == sg.WIN_CLOSED:
                                     break
                         elif obj_req.c == 'GD':
                             i = 0
-                            while event != 'Finalizar' or event != sg.WIN_CLOSED:
+                            while True:
                                 print(i, 'trying to send angle', val.direction)
                                 i+=1
                                 if val.cx:
                                     send_msg('0', obj_req.f, 'GD', [str(val.direction)])
-                                    break      
+                                    break  
+                                if event == 'Finalizar' or event == sg.WIN_CLOSED:
+                                    break    
     return
 
 
@@ -552,7 +545,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     recording = False
     # Event loop that reads and displays frames 
     while True:
@@ -617,10 +610,7 @@ def main():
                         global vpv_mid_y
                         try:
                             # tries serial connection before start initialization
-                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=1)  
-                            # read_val = ser_port.readline()
-                            # print('read_val', read_val.decode()) 
-                                
+                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.03)  
                             # gets the middle of the projection screen
                             vpv_mid_x = int(vpv.u_max/2)
                             vpv_mid_y = int(vpv.v_max/2)
