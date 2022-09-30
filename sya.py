@@ -288,9 +288,9 @@ def transform_points(frame, agnt):
     angle = degrees2radians(agnt.direction) 
     # calculate points of lines to draw 
     p1x, p1y = agnt.vx, agnt.vy
-    p2x, p2y = (((d + 2) * math.cos(angle)) + agnt.cx), (((d+2) * math.sin(angle)) + agnt.cy)
-    p3x, p3y = (2 * agnt.cx - agnt.vx), (2 * agnt.cy - agnt.vy)
-    p4x, p4y = (2 * agnt.cx - p2x), (2 * agnt.cy - p2y) 
+    p2x, p2y = (d + 2) * math.cos(angle) + agnt.cx, (d+2) * math.sin(angle) + agnt.cy
+    p3x, p3y = 2 * agnt.cx - agnt.vx, 2 * agnt.cy - agnt.vy
+    p4x, p4y = 2 * agnt.cx - p2x, 2 * agnt.cy - p2y
     # show lines
     show_line(frame, agnt, p1x, p1y, p2x, p2y)
     show_line(frame, agnt, p3x, p3y, p4x, p4y)
@@ -325,6 +325,7 @@ def transform_center2get_angle(frame, a, b):
             # shows angle
             cx, cy = utils.w2vp(agent[b].cx, agent[b].cy, vpc)
             cv2.putText(frame, 'angle: '+str(dir_angle), (int(cx), int(cy)), 3, 0.5, rgb_white)
+    return
 
 
 def generate_mask(frame, hsv, color):
@@ -501,7 +502,7 @@ def send_msg(f, d, c, p):
     ser_msg = com.serialize(obj_resp)
     ser_port.write((ser_msg+',').encode())
     print('Sent by serial:', ser_msg)
-
+    return
 
 def read_msg():
     read_val = ser_port.readline()
