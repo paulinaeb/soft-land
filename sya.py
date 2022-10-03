@@ -570,8 +570,7 @@ def main():
             if frame is None:
                 print('Something went wrong trying to connect to your camera. Please verify.')
                 return
-            else:
-                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) 
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) 
             # thread
             region = pool.apply_async(generate_mask, (frame, hsv, 'black'))
             region = region.get()  
