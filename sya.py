@@ -519,11 +519,9 @@ def read_msg():
         print(msg_read)
         if len(msg_read) >= 4:
             com.deserialize(msg_read, obj_req)
-            print(obj_req.__dict__)
             if obj_req.d == '0':
                 for val in agent.values():
                     if (val.found is True) and (str(val.id) == obj_req.f):
-                        print(val.__dict__) 
                         # type of commands here...
                         if obj_req.c == 'GP':
                             i = 0
@@ -610,7 +608,7 @@ def main():
                         global vpv_mid_y
                         try:
                             # tries serial connection before start initialization
-                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.03)  
+                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.02)  
                             # gets the middle of the projection screen
                             vpv_mid_x = int(vpv.u_max/2)
                             vpv_mid_y = int(vpv.v_max/2)
