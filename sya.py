@@ -504,12 +504,19 @@ def send_msg(f, d, c, p):
     print('Sent by serial:', ser_msg)
     return
 
+
+def read_stop():
+    stop = ser_port.readline()
+    stop = stop.decode()
+    return stop
+
+
 def read_msg():
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read:
         print('read')
-        print(msg_read) 
+        print(msg_read)
         if len(msg_read) >= 4:
             com.deserialize(msg_read, obj_req)
             print(obj_req.__dict__)
@@ -527,6 +534,10 @@ def read_msg():
                                     send_msg('0', obj_req.f, 'GP', [str(round(val.cx, 1)), str(round(val.cy, 1)), str(round(val.direction))])
                                     break
                                 if event == 'Finalizar' or event == sg.WIN_CLOSED:
+                                    break
+                                stop = read_stop()
+                                if stop == 'SS' or stop == 'S':
+                                    print(stop)
                                     break
     return
 
