@@ -55,7 +55,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 10
+count_secs = 50
     
 # layout for first monitor
 def main_layout():
@@ -483,7 +483,7 @@ def init_agent(count):
                 num_agents += 1
     # end of loop and clearing screen
     str_fin = 'Inicializacion terminada'
-    fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
+    fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y + 50), color = 'white', font='Helvetica 20')
     time.sleep(.8)
     draw.delete_figure(fin)
     print(str_fin)
@@ -520,24 +520,14 @@ def read_msg():
                         # type of commands here...
                         if obj_req.c == 'GP':
                             i = 0
-                            while True:
-                                print(i, 'trying to send pos', val.cx, val.cy)
+                            while True: 
+                                print(i, 'trying to send pos', val.cx, val.cy, val.direction)
                                 i+=1
                                 if val.cx:
-                                    send_msg('0', obj_req.f, 'GP', [str(val.cx), str(val.cy)])
+                                    send_msg('0', obj_req.f, 'GP', [str(round(val.cx, 1)), str(round(val.cy, 1)), str(round(val.direction))])
                                     break
                                 if event == 'Finalizar' or event == sg.WIN_CLOSED:
                                     break
-                        elif obj_req.c == 'GD':
-                            i = 0
-                            while True:
-                                print(i, 'trying to send angle', val.direction)
-                                i+=1
-                                if val.cx:
-                                    send_msg('0', obj_req.f, 'GD', [str(val.direction)])
-                                    break  
-                                if event == 'Finalizar' or event == sg.WIN_CLOSED:
-                                    break    
     return
 
 
@@ -602,7 +592,6 @@ def main():
                     manage_agent(frame, hsv)
                     #transform_center2get_angle(frame, 'blue', 'yellow')
                     
-                    # esto va dentro del if de arriba
                     if event == '_agents_':  
                         # serial connection variable
                         global ser_port
