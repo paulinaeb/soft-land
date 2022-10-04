@@ -44,7 +44,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = {'blue': None,
-        #  'green': None,
+         'green': None,
         #  'yellow': None
         }  
 
@@ -55,7 +55,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 50
+count_secs = 15
     
 # layout for first monitor
 def main_layout():
@@ -521,22 +521,68 @@ def read_msg():
             com.deserialize(msg_read, obj_req)
             if obj_req.d == '0':
                 for val in agent.values():
-                    if (val.found is True) and (str(val.id) == obj_req.f):
-                        # type of commands here...
-                        if obj_req.c == 'GP':
-                            i = 0
-                            while True: 
-                                print(i, 'trying to send pos', val.cx, val.cy, val.direction)
-                                i+=1
-                                if val.cx:
-                                    send_msg('0', obj_req.f, 'GP', [str(round(val.cx, 1)), str(round(val.cy, 1)), str(round(val.direction))])
-                                    break
-                                if event == 'Finalizar' or event == sg.WIN_CLOSED:
-                                    break
-                                stop = read_stop()
-                                if stop == 'SS' or stop == 'S':
-                                    print(stop)
-                                    break
+                    if val:
+                        if (val.found is True) and (str(val.id) == obj_req.f):
+                            # type of commands here...
+                            if obj_req.c == 'GP':
+                                answer(val, obj_req.f, 'GP', None)
+                            elif obj_req.c == 'AE':
+                                answer(val, obj_req.f, 'AE', None)
+                            elif obj_req.c == 'WN':
+                                res = ''
+                                flag = 0
+                                for a in agent.values():
+                                    if a:
+                                        if str(a.id) != obj_req.f and a.found == True:
+                                            for i in range(45):
+                                                if a.cx and val.cx:
+                                                    d_max = int(obj_req.p[0]) 
+                                                    d = get_distance(a.cx, val.cx, val.cy, a.cy)  
+                                                    r_sum = a.radius + val.radius
+                                                    d_total = d - r_sum
+                                                    if d_total <= d_max:
+                                                        print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
+                                                        res += str(a.id)
+                                                        flag += 1
+                                                    break
+                                print('res', res)
+                                if flag > 0:
+                                    answer(val, obj_req.f, 'WN', res)
+                                else:
+                                    answer(val, obj_req.f, 'WN', '0')
+    return
+
+
+def answer(val, f, c, p):
+    i = 0
+    while True:
+        print(i, 'sending ')
+        i+=1
+        stop = read_stop()
+        if val.cx and c == 'GP':
+            send_msg('0', f, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
+            break
+        elif c == 'WN':
+            send_msg('0', f, c, [p])
+            break 
+        elif c == 'AE':
+            exists = 0
+            s_id = int(obj_req.p[0]) 
+            for a in agent.values():
+                if a:
+                    if str(a.id) != obj_req.f and a.found == True:
+                        for j in range (45):
+                            if (a.cx) and a.id == s_id:
+                                exists = 1
+                                break
+            send_msg('0', f, c, [str(exists)])
+            break
+                            
+        elif event == 'Finalizar' or event == sg.WIN_CLOSED:
+            break
+        elif stop == 'SS' or stop == 'S':
+            print(stop)
+            break
     return
 
 
@@ -598,7 +644,7 @@ def main():
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
                     # call to function to detect agents
                     manage_agent(frame, hsv)
-                    #transform_center2get_angle(frame, 'blue', 'yellow')
+                    transform_center2get_angle(frame, 'blue', 'green')
                     
                     if event == '_agents_':  
                         # serial connection variable
