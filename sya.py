@@ -318,6 +318,9 @@ def transform_center2get_angle(frame, a, b):
             else:
                 if yt < 0:
                     dir_angle = 360 + dir_angle   
+                    
+            # if dir_angle > 180:
+            #     dir_angle = 360 - dir_angle
             
             # shows distance
             cx, cy = utils.w2vp(agent[a].cx, agent[a].cy, vpc)
@@ -325,6 +328,9 @@ def transform_center2get_angle(frame, a, b):
             # shows angle
             cx, cy = utils.w2vp(agent[b].cx, agent[b].cy, vpc)
             cv2.putText(frame, 'angle: '+str(dir_angle), (int(cx), int(cy)), 3, 0.5, rgb_white)
+            
+            print('follows:',agent[a].cx,' ', agent[a].cy, ' followed:',agent[b].cx, ' ', agent[b].cy)
+            print('distance:', d,' ', 'angle:',dir_angle)
     return
 
 
@@ -524,10 +530,13 @@ def read_msg():
                     if val:
                         if (val.found is True) and (str(val.id) == obj_req.f):
                             # type of commands here...
+                            # get position
                             if obj_req.c == 'GP':
                                 answer(val, obj_req.f, 'GP', None)
+                            # agent exists?
                             elif obj_req.c == 'AE':
                                 answer(val, obj_req.f, 'AE', None)
+                            # who are near me
                             elif obj_req.c == 'WN':
                                 res = ''
                                 flag = 0
@@ -550,34 +559,42 @@ def read_msg():
                                     answer(val, obj_req.f, 'WN', res)
                                 else:
                                     answer(val, obj_req.f, 'WN', '0')
+                            # call agent
+                            elif obj_req.c == 'CA':
+                                answer(val, obj_req.p[0], 'CA', [obj_req.f, obj_req.p[1], obj_req.p[2]])
     return
 
 
-def answer(val, f, c, p):
+def answer(val, d, c, p):
     i = 0
     while True:
         print(i, 'sending ')
         i+=1
         stop = read_stop()
         if val.cx and c == 'GP':
-            send_msg('0', f, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
+            send_msg('0', d, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
             break
         elif c == 'WN':
-            send_msg('0', f, c, [p])
+            send_msg('0', d, c, [p])
             break 
         elif c == 'AE':
-            exists = 0
+            exists = '0'
             s_id = int(obj_req.p[0]) 
             for a in agent.values():
                 if a:
                     if str(a.id) != obj_req.f and a.found == True:
-                        for j in range (45):
+                        for j in range (60):
                             if (a.cx) and a.id == s_id:
-                                exists = 1
+                                exists = '1'
+                                send_msg('0', d, c, [exists, str(round(a.cx)), str(round(a.cy)), str(round(a.direction))])
                                 break
-            send_msg('0', f, c, [str(exists)])
+            if exists == '0':                
+                send_msg('0', d, c, [exists])
             break
-                            
+        elif c == 'CA':
+            send_msg('0', d, c, p)
+            break
+        
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
         elif stop == 'SS' or stop == 'S':
@@ -644,7 +661,7 @@ def main():
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
                     # call to function to detect agents
                     manage_agent(frame, hsv)
-                    transform_center2get_angle(frame, 'blue', 'green')
+                    # transform_center2get_angle(frame, 'blue', 'green')
                     
                     if event == '_agents_':  
                         # serial connection variable
