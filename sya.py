@@ -562,6 +562,10 @@ def read_msg():
                             # call agent
                             elif obj_req.c == 'CA':
                                 answer(val, obj_req.p[0], 'CA', [obj_req.f, obj_req.p[1], obj_req.p[2]])
+        else:
+            # not found
+            if msg_read != 'SS':
+                send_msg('0', 'F', 'NF', [])
     return
 
 
@@ -671,7 +675,7 @@ def main():
                         global vpv_mid_y
                         try:
                             # tries serial connection before start initialization
-                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.02)  
+                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.01)  
                             # gets the middle of the projection screen
                             vpv_mid_x = int(vpv.u_max/2)
                             vpv_mid_y = int(vpv.v_max/2)
