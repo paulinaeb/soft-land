@@ -11,6 +11,7 @@ from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 import time
 import serial 
+import asyncio
 
 pool = ThreadPool(processes=1)
 
@@ -43,9 +44,9 @@ rgb_black = (0, 0, 0)
 rgb_white = (255, 255, 255)
 
 # colors of agent triangles
-agent = {'blue': None,
-         'green': None,
-        #  'yellow': None
+agent = { 'blue': None,
+          #'green': None,
+          #'yellow': None
         }  
 
 # init agents with id and no attributes
@@ -80,6 +81,8 @@ def draw_marks():
     draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
+    x, y = utils.w2vp(20, 25, vpv)
+    draw.draw_circle((x, y), 2, fill_color='white')
     return
 
 # clear projection in second monitor
@@ -219,9 +222,8 @@ def manage_agent(frame, hsv):
             else: 
                 circle_color = 'green'  
             # shows the draws corresponding to the agent in the projection
-            show_circle(frame, agnt, circle_color) 
+            show_draws(frame, agnt, circle_color) 
             transform_points(frame, agnt)
-            show_text(agnt)  
     return
 
 # detect agents around another (this)
@@ -247,7 +249,7 @@ def detect_agents(this):
         return False         
         
         
-def show_circle(frame, agnt, color):
+def show_draws(frame, agnt, color):
     #camera vp
     rc, _ = utils.w2vp(agnt.radius, 0, vpc) 
     cxc, cyc = utils.w2vp(agnt.cx, agnt.cy, vpc)
@@ -259,8 +261,18 @@ def show_circle(frame, agnt, color):
         cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.25)), (0, 255, 0), 2)
     else:
         #red
-        cv2.circle(frame, (int(cxc), int(cyc)), int(rc), (0, 0, 255), 2)   
+        cv2.circle(frame, (int(cxc), int(cyc)), int(rc), (0, 0, 255), 2)
+       
     agnt.add_draws(draw.draw_circle((cxv, cyv), rv, line_color=color)) 
+    agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 15'))
+    
+    vx, vy = utils.w2vp(agnt.vx, agnt.vy, vpv)
+    if vy > cyv:
+        vx, vy = utils.w2vp(agnt.vx + 5, agnt.vy + 5, vpv)
+    else:
+        vx, vy = utils.w2vp(agnt.vx - 5, agnt.vy - 5, vpv)
+    agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
+    
     return
 
 
@@ -271,13 +283,6 @@ def show_line(frame, agnt, p1, p2, p3, p4):
     x1c, y1c = utils.w2vp(p1, p2, vpv)
     x2c, y2c = utils.w2vp(p3, p4, vpv) 
     agnt.add_draws(draw.draw_line((x1c, y1c), (x2c, y2c), color='blue')) 
-    return
-
-
-def show_text(agnt):
-    # shows the info of the agent in projection
-    vx, vy = utils.w2vp(agnt.vx, agnt.vy, vpv)
-    agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray')) 
     return
 
 
@@ -407,9 +412,9 @@ def generate_mask(frame, hsv, color):
                     # print(cx2, cy2, vx2, vy2, r) 
                     
                     # display info on frame 
-                    info = str(direction)+' | '+str(cx2)+' | '+ str(cy2)
-                    cv2.putText(frame, info, (vx, vy), 3, 0.5, (0, 0, 0))  
-                    
+                    info = 'xx: '+str(cx2)+'\nyy:'+ str(cy2)+'\ntt:'+str(direction)
+                    info2 = 'x: '+str(cx2)+' y:'+ str(cy2)+' t:'+str(direction)
+                    cv2.putText(frame, info2, (vx, vy), 3, 0.5, (0, 0, 0))
                     # create object agent and assign values in the world  
                     agent[color].set_values(cx2, cy2, vx2, vy2, r, direction, info)   
                     return agent[color]
@@ -452,7 +457,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            print('Inicializando...')
+            #print('Inicializando...')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -521,7 +526,6 @@ def read_msg():
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read:
-        print('read')
         print(msg_read)
         if len(msg_read) >= 4:
             com.deserialize(msg_read, obj_req)
@@ -570,11 +574,10 @@ def read_msg():
 
 
 def answer(val, d, c, p):
-    i = 0
+    #i = 0
     while True:
-        print(i, 'sending ')
-        i+=1
-        stop = read_stop()
+       # print(i, 'sending ')
+        #i+=1
         if val.cx and c == 'GP':
             send_msg('0', d, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
             break
@@ -598,11 +601,10 @@ def answer(val, d, c, p):
         elif c == 'CA':
             send_msg('0', d, c, p)
             break
-        
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
-        elif stop == 'SS' or stop == 'S':
-            print(stop)
+        elif read_stop() == 'SS':
+            print('stop')
             break
     return
 
@@ -612,8 +614,19 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     recording = False
+    for m in get_monitors():  
+        x_init = m.x 
+        # set viewport values for projection 
+        vpv.set_values(5, 5, m.width - 5, m.height - 5) 
+    # print(vpv.u_min, vpv.v_min, vpv.u_max, vpv.v_max)
+    # calls to layout to define window
+    virtual_world = sg.Window('Virtual world', second_layout(), no_titlebar=True, finalize=True, location=(x_init,0), size=(vpv.u_max + 5, vpv.v_max + 5), margins=(0,0)).Finalize()
+    virtual_world.Maximize() 
+    global draw
+    draw = virtual_world['-GRAPH-']  
+    draw_marks()  
     # Event loop that reads and displays frames 
     while True:
         global event
@@ -626,17 +639,6 @@ def main():
         
         elif event == 'Iniciar': 
             recording = True 
-            for m in get_monitors():  
-                x_init = m.x 
-                 # set viewport values for projection 
-                vpv.set_values(5, 5, m.width - 5, m.height - 5) 
-            # print(vpv.u_min, vpv.v_min, vpv.u_max, vpv.v_max)
-            # calls to layout to define window
-            virtual_world = sg.Window('Virtual world', second_layout(), no_titlebar=True, finalize=True, location=(x_init,0), size=(vpv.u_max + 5, vpv.v_max + 5), margins=(0,0)).Finalize()
-            virtual_world.Maximize() 
-            global draw
-            draw = virtual_world['-GRAPH-']  
-            draw_marks()  
             
         if recording: 
             # turn the camera autofocus off
@@ -678,8 +680,12 @@ def main():
                             ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.01)  
                             # gets the middle of the projection screen
                             vpv_mid_x = int(vpv.u_max/2)
-                            vpv_mid_y = int(vpv.v_max/2)
-                            print('Inicializando agentes...')   
+                            vpv_mid_y = int(vpv.v_max/2) 
+                            
+                            # loop = asyncio.get_event_loop()
+                            # asyncio.ensure_future(read_serial())
+                            # loop.run_forever()
+                            
                             # start of thread that init timer
                             thre = threading.Thread(target = init_agent, args=(count_secs,))
                             thre.start()
