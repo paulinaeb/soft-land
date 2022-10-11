@@ -509,14 +509,8 @@ def send_msg(f, d, c, p):
     obj_resp.set_values(f, d, c, p)
     ser_msg = com.serialize(obj_resp)
     ser_port.write((ser_msg+',').encode())
-    print('Sent by serial:', ser_msg)
+    print('Sent:', ser_msg)
     return
-
-
-def read_stop():
-    stop = ser_port.readline()
-    stop = stop.decode()
-    return stop
 
 
 msg_received = []
