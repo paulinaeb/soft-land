@@ -456,7 +456,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            #print('Inicializando...')
+            print('Inicializando...')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -514,7 +514,7 @@ def send_msg(f, d, c, p):
 
 
 msg_received = []
-nf = False
+stop = False
 
 
 def read_msg():
@@ -525,13 +525,15 @@ def read_msg():
         if msg_read != 'SS':
             msg_received.append(msg_read)
         else:
-            global nf 
-            nf = True
+            global stop
+            stop = True
     return
 
 
 def answer(val, d, c, p):
+    global stop
     while True:
+        print('sending')
         if val.cx and c == 'GP':
             send_msg('0', d, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
             break
@@ -557,6 +559,10 @@ def answer(val, d, c, p):
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
+        elif stop:
+            print('stop searching')
+            stop = False
+            break
     return
 
 
@@ -573,7 +579,7 @@ def main():
         vpv.set_values(5, 5, m.width - 5, m.height - 5) 
     # print(vpv.u_min, vpv.v_min, vpv.u_max, vpv.v_max)
     # calls to layout to define window
-    virtual_world = sg.Window('Virtual world', second_layout(), no_titlebar=True, finalize=True, location=(x_init,0), size=(vpv.u_max + 5, vpv.v_max + 5), margins=(0,0)).Finalize()
+    virtual_world = sg.Window('Sand', second_layout(), no_titlebar=True, finalize=True, location=(x_init,0), size=(vpv.u_max + 5, vpv.v_max + 5), margins=(0,0)).Finalize()
     virtual_world.Maximize() 
     global draw
     draw = virtual_world['-GRAPH-']  
@@ -639,25 +645,24 @@ def main():
                         except serial.SerialException:
                             print('There was found a problem with your serial port connection. Please verify and try again.')
             else:
-                # descomentar
                 # clear_screen()        
                 pass
-            #process and updates image from camera 
-            imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
-            window['image'].update(data=imgbytes)
-            if ser_port:
+            if num_agents > 0:
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
                 if len(msg_received) > 0 and processing == False:
                     t = threading.Thread(target=process_msg)
                     t.start()
-
+            #process and updates image from camera 
+            imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
+            window['image'].update(data=imgbytes)
+            
+            
 processing = False           
             
 def process_msg():
     global processing
     processing = True
-    print('in msg rec')
     if len(msg_received[0]) >= 4:
         com.deserialize(msg_received[0], obj_req)
         if obj_req.d == '0':
@@ -705,5 +710,4 @@ def process_msg():
             
 
 if __name__=='__main__': 
-    t1 = threading.Thread(target=main)
-    t1.start()
+    main()
