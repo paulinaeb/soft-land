@@ -11,7 +11,6 @@ from multiprocessing.pool import ThreadPool
 from screeninfo import get_monitors 
 import time
 import serial 
-import asyncio
 
 pool = ThreadPool(processes=1)
 
@@ -503,8 +502,6 @@ def init_agent(count):
     # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
     if num_agents > 0:
         send_msg('0', 'F', 'AI', [str(num_agents)])
-        while event != 'Finalizar' and event != sg.WIN_CLOSED:
-            read_msg()
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
@@ -522,62 +519,25 @@ def read_stop():
     return stop
 
 
+msg_received = []
+nf = False
+
+
 def read_msg():
     read_val = ser_port.readline()
     msg_read = read_val.decode()
     if msg_read:
         print(msg_read)
-        if len(msg_read) >= 4:
-            com.deserialize(msg_read, obj_req)
-            if obj_req.d == '0':
-                for val in agent.values():
-                    if val:
-                        if (val.found is True) and (str(val.id) == obj_req.f):
-                            # type of commands here...
-                            # get position
-                            if obj_req.c == 'GP':
-                                answer(val, obj_req.f, 'GP', None)
-                            # agent exists?
-                            elif obj_req.c == 'AE':
-                                answer(val, obj_req.f, 'AE', None)
-                            # who are near me
-                            elif obj_req.c == 'WN':
-                                res = ''
-                                flag = 0
-                                for a in agent.values():
-                                    if a:
-                                        if str(a.id) != obj_req.f and a.found == True:
-                                            for i in range(45):
-                                                if a.cx and val.cx:
-                                                    d_max = int(obj_req.p[0]) 
-                                                    d = get_distance(a.cx, val.cx, val.cy, a.cy)  
-                                                    r_sum = a.radius + val.radius
-                                                    d_total = d - r_sum
-                                                    if d_total <= d_max:
-                                                        print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
-                                                        res += str(a.id)
-                                                        flag += 1
-                                                    break
-                                print('res', res)
-                                if flag > 0:
-                                    answer(val, obj_req.f, 'WN', res)
-                                else:
-                                    answer(val, obj_req.f, 'WN', '0')
-                            # call agent
-                            elif obj_req.c == 'CA':
-                                answer(val, obj_req.p[0], 'CA', [obj_req.f, obj_req.p[1], obj_req.p[2]])
+        if msg_read != 'SS':
+            msg_received.append(msg_read)
         else:
-            # not found
-            if msg_read != 'SS':
-                send_msg('0', 'F', 'NF', [])
+            global nf 
+            nf = True
     return
 
 
 def answer(val, d, c, p):
-    #i = 0
     while True:
-       # print(i, 'sending ')
-        #i+=1
         if val.cx and c == 'GP':
             send_msg('0', d, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
             break
@@ -602,9 +562,6 @@ def answer(val, d, c, p):
             send_msg('0', d, c, p)
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
-            break
-        elif read_stop() == 'SS':
-            print('stop')
             break
     return
 
@@ -631,7 +588,6 @@ def main():
     while True:
         global event
         event, _ = window.read(timeout=20) 
-        
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
             if recording:
                 cap.release()
@@ -682,10 +638,6 @@ def main():
                             vpv_mid_x = int(vpv.u_max/2)
                             vpv_mid_y = int(vpv.v_max/2) 
                             
-                            # loop = asyncio.get_event_loop()
-                            # asyncio.ensure_future(read_serial())
-                            # loop.run_forever()
-                            
                             # start of thread that init timer
                             thre = threading.Thread(target = init_agent, args=(count_secs,))
                             thre.start()
@@ -699,7 +651,64 @@ def main():
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
-             
+            if ser_port:
+                t2 = threading.Thread(target=read_msg)
+                t2.start()
+                if len(msg_received) > 0 and processing == False:
+                    t = threading.Thread(target=process_msg)
+                    t.start()
+
+processing = False           
+            
+def process_msg():
+    global processing
+    processing = True
+    print('in msg rec')
+    if len(msg_received[0]) >= 4:
+        com.deserialize(msg_received[0], obj_req)
+        if obj_req.d == '0':
+            for val in agent.values():
+                if val:
+                    if (val.found is True) and (str(val.id) == obj_req.f):
+                        # type of commands here...
+                        # get position
+                        if obj_req.c == 'GP':
+                            answer(val, obj_req.f, 'GP', None)
+                        # agent exists?
+                        elif obj_req.c == 'AE':
+                            answer(val, obj_req.f, 'AE', None)
+                        # who are near me
+                        elif obj_req.c == 'WN':
+                            res = ''
+                            flag = 0
+                            for a in agent.values():
+                                if a:
+                                    if str(a.id) != obj_req.f and a.found == True:
+                                        for i in range(45):
+                                            if a.cx and val.cx:
+                                                d_max = int(obj_req.p[0]) 
+                                                d = get_distance(a.cx, val.cx, val.cy, a.cy)  
+                                                r_sum = a.radius + val.radius
+                                                d_total = d - r_sum
+                                                if d_total <= d_max:
+                                                    print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
+                                                    res += str(a.id)
+                                                    flag += 1
+                                                break
+                            print('res', res)
+                            if flag > 0:
+                                answer(val, obj_req.f, 'WN', res)
+                            else:
+                                answer(val, obj_req.f, 'WN', '0')
+                        # call agent
+                        elif obj_req.c == 'CA':
+                            answer(val, obj_req.p[0], 'CA', [obj_req.f, obj_req.p[1], obj_req.p[2]])
+    else:
+        send_msg('0', 'F', 'NF', [])
+    msg_received.pop(0)
+    processing = False
+    return
+            
 
 if __name__=='__main__': 
     t1 = threading.Thread(target=main)
