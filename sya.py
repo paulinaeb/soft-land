@@ -456,7 +456,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            print('Inicializando...')
+            print('')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -494,11 +494,10 @@ def init_agent(count):
     # end of loop and clearing screen
     str_fin = 'Inicializacion terminada'
     fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y + 50), color = 'white', font='Helvetica 20')
-    time.sleep(.8)
+    time.sleep(1)
     draw.delete_figure(fin)
     print(str_fin)
     print('Number of agents', str(num_agents))
-    # manage communication
     # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
     if num_agents > 0:
         send_msg('0', 'F', 'AI', [str(num_agents)])
@@ -532,27 +531,32 @@ def read_msg():
 
 def answer(val, d, c, p):
     global stop
+    i = 0
     while True:
-        print('sending')
+        if i % 10000 == 0:
+            print(i, 'send')
         if val.cx and c == 'GP':
-            send_msg('0', d, c, [str(round(val.cx)), str(round(val.cy)), str(round(val.direction))])
+            if val.cx <= 99.44:
+                x = str(round(val.cx, 1))
+            else:
+                x = str(round(val.cx))
+            send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
         elif c == 'WN':
             send_msg('0', d, c, [p])
             break 
         elif c == 'AE':
             exists = '0'
-            s_id = int(obj_req.p[0]) 
-            for a in agent.values():
-                if a:
-                    if str(a.id) != obj_req.f and a.found == True:
-                        for j in range (60):
-                            if (a.cx) and a.id == s_id:
-                                exists = '1'
-                                send_msg('0', d, c, [exists, str(round(a.cx)), str(round(a.cy)), str(round(a.direction))])
-                                break
-            if exists == '0':                
-                send_msg('0', d, c, [exists])
+            if num_agents > 1:
+                s_id = int(obj_req.p[0]) 
+                for a in agent.values():
+                    if a:
+                        if str(a.id) != obj_req.f and a.found == True:
+                            for j in range (60):
+                                if (a.cx) and a.id == s_id:
+                                    exists = '1'
+                                    break   
+            send_msg('0', d, c, [exists])
             break
         elif c == 'CA':
             send_msg('0', d, c, p)
@@ -563,6 +567,7 @@ def answer(val, d, c, p):
             print('stop searching')
             stop = False
             break
+        i += 1
     return
 
 
@@ -680,20 +685,21 @@ def process_msg():
                         elif obj_req.c == 'WN':
                             res = ''
                             flag = 0
-                            for a in agent.values():
-                                if a:
-                                    if str(a.id) != obj_req.f and a.found == True:
-                                        for i in range(45):
-                                            if a.cx and val.cx:
-                                                d_max = int(obj_req.p[0]) 
-                                                d = get_distance(a.cx, val.cx, val.cy, a.cy)  
-                                                r_sum = a.radius + val.radius
-                                                d_total = d - r_sum
-                                                if d_total <= d_max:
-                                                    print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
-                                                    res += str(a.id)
-                                                    flag += 1
-                                                break
+                            if num_agents > 1:
+                                for a in agent.values():
+                                    if a:
+                                        if str(a.id) != obj_req.f and a.found == True:
+                                            for i in range(45):
+                                                if a.cx and val.cx:
+                                                    d_max = int(obj_req.p[0]) 
+                                                    d = get_distance(a.cx, val.cx, val.cy, a.cy)  
+                                                    r_sum = a.radius + val.radius
+                                                    d_total = d - r_sum
+                                                    if d_total <= d_max:
+                                                        print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
+                                                        res += str(a.id)
+                                                        flag += 1
+                                                    break
                             print('res', res)
                             if flag > 0:
                                 answer(val, obj_req.f, 'WN', res)
