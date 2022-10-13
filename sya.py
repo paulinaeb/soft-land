@@ -44,8 +44,8 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-          #'green': None,
-          #'yellow': None
+          'green': None,
+          'yellow': None
         }  
 
 # init agents with id and no attributes
@@ -351,7 +351,7 @@ def generate_mask(frame, hsv, color):
         approx = cv2.approxPolyDP(count, epsilon, True)
         # get area to work with only visible objects
         area = cv2.contourArea(count)
-        if area > 10:
+        if area > 5:
             # recognize rectangles 
             if len(approx) == 4 and color == 'black': 
                 # computes the centroid of shapes 
@@ -456,7 +456,7 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            print('')
+            print('Init..')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
@@ -533,9 +533,10 @@ def answer(val, d, c, p):
     global stop
     i = 0
     while True:
-        if i % 10000 == 0:
+        if i % 1000 == 0:
             print(i, 'send')
         if val.cx and c == 'GP':
+            print('get pos')
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
             else:
@@ -543,9 +544,11 @@ def answer(val, d, c, p):
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
         elif c == 'WN':
+            print('whos near me')
             send_msg('0', d, c, [p])
             break 
         elif c == 'AE':
+            print('agent exists')
             exists = '0'
             if num_agents > 1:
                 s_id = int(obj_req.p[0]) 
@@ -559,6 +562,11 @@ def answer(val, d, c, p):
             send_msg('0', d, c, [exists])
             break
         elif c == 'CA':
+            print('call agent')
+            send_msg('0', d, c, p)
+            break
+        elif c == 'AR':
+            print('agent arrived')
             send_msg('0', d, c, p)
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -669,6 +677,7 @@ def process_msg():
     global processing
     processing = True
     if len(msg_received[0]) >= 4:
+        print('on msg rec')
         com.deserialize(msg_received[0], obj_req)
         if obj_req.d == '0':
             for val in agent.values():
@@ -677,7 +686,13 @@ def process_msg():
                         # type of commands here...
                         # get position
                         if obj_req.c == 'GP':
-                            answer(val, obj_req.f, 'GP', None)
+                            if len(obj_req.p) == 0:
+                                answer(val, obj_req.f, 'GP', None)
+                            else:
+                                for a in agent.values():
+                                    if str(a.id) == obj_req.p[0]:
+                                        answer(a, obj_req.f, 'GP', None)
+                                        break
                         # agent exists?
                         elif obj_req.c == 'AE':
                             answer(val, obj_req.f, 'AE', None)
@@ -707,7 +722,10 @@ def process_msg():
                                 answer(val, obj_req.f, 'WN', '0')
                         # call agent
                         elif obj_req.c == 'CA':
-                            answer(val, obj_req.p[0], 'CA', [obj_req.f, obj_req.p[1], obj_req.p[2]])
+                            answer(val, obj_req.p[0], 'CA', [obj_req.f])
+                        # agent arrived
+                        elif obj_req.c == 'AR':
+                            answer(val, obj_req.p[0], 'AR', [obj_req.f])
     else:
         send_msg('0', 'F', 'NF', [])
     msg_received.pop(0)
