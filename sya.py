@@ -44,7 +44,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-          'green': None,
+          'green': None
         #   'yellow': None
         }  
 
@@ -338,7 +338,19 @@ def transform_center2get_angle(frame, a, b):
     return
 
 objs = []
+moving_obj = []
 
+def set_obj(arr, cx, cy):
+    exists = False
+    if len(arr) == 0:
+        arr.append((cx, cy))
+    else:
+        for obj in arr:
+            if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
+                exists = True
+        if exists == False:
+            arr.append((cx, cy))
+    return arr
 
 def generate_mask(frame, hsv, color):
     mask = cv2.inRange(hsv, np.array(data.HSV_COLORS[color][0]), np.array(data.HSV_COLORS[color][1]))
@@ -347,7 +359,7 @@ def generate_mask(frame, hsv, color):
     num_corner = 0
     corner1 = []
     corner2 = []
-    for count in contours:  
+    for count in contours:
         # using functions to get the contour of shapes
         epsilon = 0.01 * cv2.arcLength(count, True)
         approx = cv2.approxPolyDP(count, epsilon, True)
@@ -355,9 +367,8 @@ def generate_mask(frame, hsv, color):
         area = cv2.contourArea(count)
         if area > 800:
             # recognize rectangles 
-            if len(approx) == 4: 
-                cx, cy = centroid(count)
-                if color == 'black':
+            if len(approx) == 4 and color == 'black':
+                    cx, cy = centroid(count)
                     cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
                     # rectangles - marks 
                     if num_corner == 0: 
@@ -372,20 +383,17 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-                if color == 'blue' and init_objs == True:
-                    cx, cy = utils.vp2w(cx, cy, vpc)
-                    cx, cy =(math.floor(cx), math.floor(cy))
-                    cv2.drawContours(frame, [approx], 0, (0), 2)
-                    obj_exists = False
+            elif color == 'blue' and init_objs == True and (len(approx) == 4 or len(approx) > 8):
+                cx, cy = centroid(count)
+                cx, cy = utils.vp2w(cx, cy, vpc)
+                cx, cy =(math.floor(cx), math.floor(cy))
+                cv2.drawContours(frame, [approx], 0, (0), 2)
+                if len(approx) == 4:
                     global objs
-                    if len(objs) == 0:
-                        objs.append((cx, cy))
-                    else:
-                        for obj in objs:
-                            if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
-                                obj_exists = True
-                        if obj_exists == False:
-                            objs.append((cx, cy))
+                    objs = set_obj(objs, cx, cy)
+                else:
+                    global moving_obj
+                    moving_obj = set_obj(moving_obj, cx, cy)
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
@@ -534,12 +542,17 @@ def init_obj(obj_type):
     else:
         global init_objs
         init_objs = False
+        r, _ = utils.w2vp(3, 0, vpv)
         if len(objs) > 0:
-            r = 40
             print(objs)
             for obj in objs:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 draw.draw_rectangle((x - r, y - r), (x + r, y + r), fill_color='blue')
+        if len(moving_obj) > 0:
+            print(moving_obj)
+            for obj in moving_obj:
+                x, y = utils.w2vp(obj[0], obj[1], vpv)
+                draw.draw_circle((x, y), r, fill_color='yellow') 
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
