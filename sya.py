@@ -45,7 +45,7 @@ rgb_white = (255, 255, 255)
 # colors of agent triangles
 agent = { 'blue': None,
           'green': None,
-          'yellow': None
+        #   'yellow': None
         }  
 
 # init agents with id and no attributes
@@ -529,7 +529,7 @@ def read_msg():
     return
 
 
-def answer(val, d, c, p):
+def answer(val, d, c):
     global stop
     i = 0
     while True:
@@ -542,32 +542,6 @@ def answer(val, d, c, p):
             else:
                 x = str(round(val.cx))
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
-            break
-        elif c == 'WN':
-            print('whos near me')
-            send_msg('0', d, c, [p])
-            break 
-        elif c == 'AE':
-            print('agent exists')
-            exists = '0'
-            if num_agents > 1:
-                s_id = int(obj_req.p[0]) 
-                for a in agent.values():
-                    if a:
-                        if str(a.id) != obj_req.f and a.found == True:
-                            for j in range (60):
-                                if (a.cx) and a.id == s_id:
-                                    exists = '1'
-                                    break   
-            send_msg('0', d, c, [exists])
-            break
-        elif c == 'CA':
-            print('call agent')
-            send_msg('0', d, c, p)
-            break
-        elif c == 'AR':
-            print('agent arrived')
-            send_msg('0', d, c, p)
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
@@ -687,15 +661,12 @@ def process_msg():
                         # get position
                         if obj_req.c == 'GP':
                             if len(obj_req.p) == 0:
-                                answer(val, obj_req.f, 'GP', None)
+                                answer(val, obj_req.f, obj_req.c)
                             else:
                                 for a in agent.values():
                                     if str(a.id) == obj_req.p[0]:
-                                        answer(a, obj_req.f, 'GP', None)
+                                        answer(a, obj_req.f, obj_req.c)
                                         break
-                        # agent exists?
-                        elif obj_req.c == 'AE':
-                            answer(val, obj_req.f, 'AE', None)
                         # who are near me
                         elif obj_req.c == 'WN':
                             res = ''
@@ -717,15 +688,13 @@ def process_msg():
                                                     break
                             print('res', res)
                             if flag > 0:
-                                answer(val, obj_req.f, 'WN', res)
+                                p = [res]
                             else:
-                                answer(val, obj_req.f, 'WN', '0')
-                        # call agent
-                        elif obj_req.c == 'CA':
-                            answer(val, obj_req.p[0], 'CA', [obj_req.f])
-                        # agent arrived
-                        elif obj_req.c == 'AR':
-                            answer(val, obj_req.p[0], 'AR', [obj_req.f])
+                                p = '0'
+                            send_msg('0', obj_req.f, obj_req.c, [p])
+                             # call agent         # agent arrived      # follow me
+                        elif obj_req.c == 'CA' or obj_req.c == 'AR' or obj_req.c == 'FM':
+                            send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
     else:
         send_msg('0', 'F', 'NF', [])
     msg_received.pop(0)
