@@ -62,10 +62,10 @@ def main_layout():
     # define the window layout
     layout = [[sg.Text('Entorno Virtual', size=(40, 1), justification='center', font='Helvetica 20')],
               [sg.Image(filename='', key='image')],
-              [sg.Button('Iniciar', size=(8, 1), font='Helvetica 14', key='Iniciar'),
-               sg.pin(sg.Button('Inicializar Agentes', size=(15, 1),  font='Helvetica 14', key='_agents_', visible=False)),
-               sg.Button('Finalizar', size=(8, 1),  font='Helvetica 14'),
-               sg.Button('Objetos Virtuales', size=(15, 1),  font='Helvetica 14')
+              [sg.Button('Iniciar', size=(8, 1), font='Helvetica 12', key='Iniciar'),
+               sg.pin(sg.Button('Inicializar objetos', size=(15, 1),  font='Helvetica 12', key='_obj_', visible=False)),
+               sg.pin(sg.Button('Inicializar agentes', size=(15, 1),  font='Helvetica 12', key='_agents_', visible=False)),
+               sg.Button('Finalizar', size=(8, 1),  font='Helvetica 12')
                ]] 
     return layout
 
@@ -581,6 +581,9 @@ def main():
             return
         
         elif event == 'Iniciar': 
+            window['Iniciar'].Update(visible = False)
+            window['_obj_'].Update(visible = True)
+            window['_agents_'].Update(visible = True)
             recording = True 
             
         if recording: 
@@ -595,8 +598,7 @@ def main():
             # thread
             region = pool.apply_async(generate_mask, (frame, hsv, 'black'))
             region = region.get()  
-            window['Iniciar'].Update(visible = False)
-            window['_agents_'].Update(visible = True)
+
             if region: 
                 # print(region)
                 min_corner, max_corner = region
@@ -612,7 +614,12 @@ def main():
                     manage_agent(frame, hsv)
                     # transform_center2get_angle(frame, 'blue', 'green')
                     
+                    if event == '_obj_':
+                        window['_obj_'].Update(visible = False)
+                    
                     if event == '_agents_':  
+                        window['_agents_'].Update(visible = False)
+                        window['_obj_'].Update(visible = False)
                         # serial connection variable
                         global ser_port
                         # set global values used multiple times to print in projection gui
