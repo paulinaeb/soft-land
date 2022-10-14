@@ -534,7 +534,12 @@ def init_obj(obj_type):
     else:
         global init_objs
         init_objs = False
-        print(objs)
+        if len(objs) > 0:
+            r = 40
+            print(objs)
+            for obj in objs:
+                x, y = utils.w2vp(obj[0], obj[1], vpv)
+                draw.draw_rectangle((x - r, y - r), (x + r, y + r), fill_color='blue')
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
