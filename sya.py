@@ -55,7 +55,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 15
+count_secs = 10
     
 # layout for first monitor
 def main_layout():
@@ -199,7 +199,7 @@ def manage_agent(frame, hsv):
         elif agnt:
             # start of init agent management validating time
             if int_sec:
-                if count_secs >= int_sec >= 0 and agent[color].found == False: 
+                if count_secs >= int_sec >= 0 and agent[color].found == False and init_objs == False: 
                     # send by serial
                     agent[color].found = True
                     # serialize message to send, from sand to all (command = Info ID) with one parameter
@@ -337,6 +337,8 @@ def transform_center2get_angle(frame, a, b):
             print('distance:', d,' ', 'angle:',dir_angle)
     return
 
+objs = []
+
 
 def generate_mask(frame, hsv, color):
     mask = cv2.inRange(hsv, np.array(data.HSV_COLORS[color][0]), np.array(data.HSV_COLORS[color][1]))
@@ -351,25 +353,39 @@ def generate_mask(frame, hsv, color):
         approx = cv2.approxPolyDP(count, epsilon, True)
         # get area to work with only visible objects
         area = cv2.contourArea(count)
-        if area > 5:
+        if area > 800:
             # recognize rectangles 
-            if len(approx) == 4 and color == 'black': 
-                # computes the centroid of shapes 
+            if len(approx) == 4: 
                 cx, cy = centroid(count)
-                cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
-                # rectangles - marks 
-                if num_corner == 0: 
-                    num_corner = new_corner(corner1, num_corner, cx, cy)
-                elif num_corner == 1: 
-                    num_corner = new_corner(corner2, num_corner, cx, cy)
-                    # draws the region of interest as a rectangle
-                    cv2.rectangle(frame, (int(corner1[0]), int(corner1[1])), (int(corner2[0]), int(corner2[1])), rgb_white, 2)
-                    return corner1, corner2
-                elif num_corner == 2:
-                    # reset values
-                    corner1 = []
-                    corner2 = []
-                    num_corner = 0
+                if color == 'black':
+                    cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
+                    # rectangles - marks 
+                    if num_corner == 0: 
+                        num_corner = new_corner(corner1, num_corner, cx, cy)
+                    elif num_corner == 1: 
+                        num_corner = new_corner(corner2, num_corner, cx, cy)
+                        # draws the region of interest as a rectangle
+                        cv2.rectangle(frame, (int(corner1[0]), int(corner1[1])), (int(corner2[0]), int(corner2[1])), rgb_white, 2)
+                        return corner1, corner2
+                    elif num_corner == 2:
+                        # reset values
+                        corner1 = []
+                        corner2 = []
+                        num_corner = 0
+                if color == 'blue' and init_objs == True:
+                    cx, cy = utils.vp2w(cx, cy, vpc)
+                    cx, cy =(math.floor(cx), math.floor(cy))
+                    cv2.drawContours(frame, [approx], 0, (0), 2)
+                    obj_exists = False
+                    global objs
+                    if len(objs) == 0:
+                        objs.append((cx, cy))
+                    else:
+                        for obj in objs:
+                            if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
+                                obj_exists = True
+                        if obj_exists == False:
+                            objs.append((cx, cy))
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
@@ -411,7 +427,7 @@ def generate_mask(frame, hsv, color):
                     # print(cx2, cy2, vx2, vy2, r) 
                     
                     # display info on frame 
-                    info = 'xx: '+str(cx2)+'\nyy:'+ str(cy2)+'\ntt:'+str(direction)
+                    info = 'x: '+str(cx2)+'\ny:'+ str(cy2)+'\nt:'+str(direction)
                     info2 = 'x: '+str(cx2)+' y:'+ str(cy2)+' t:'+str(direction)
                     cv2.putText(frame, info2, (vx, vy), 3, 0.5, (0, 0, 0))
                     # create object agent and assign values in the world  
@@ -426,19 +442,28 @@ def time_as_int():
     return int(round(time.time() * 100)) 
 
 
-def init_agent(count):
+def init_obj(obj_type):
     # calculates positions for projection strings 
     top_left = (vpv_mid_x + 40, vpv_mid_y + 22)
     top_right = (vpv_mid_x - 40, vpv_mid_y - 22) 
     # time
-    count = count * 100
+    count = count_secs * 100
     # will use global variable
     global int_sec
     # as many times as agents exists
-    for i in range(len(agent)):
+    if obj_type == 1:
+        times = len(agent)
+    else:
+        times = 1
+    for i in range(times):
         global found
         found = False
-        title = draw.draw_text('Coloque el agente nº '+str(i + 1)+' en la arena', location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
+        if obj_type == 1:
+            str_title = 'Coloque el agente nº '+str(i + 1)+' en la arena'
+        else:
+            str_title = 'Coloque sus objetos en la arena'
+        time.sleep(.01)
+        title = draw.draw_text(str_title, location = (vpv_mid_x, vpv_mid_y+50), color = 'white', font='Helvetica 20')
         # variables to complete timer
         int_sec = 0
         current_time = 0 
@@ -488,22 +513,28 @@ def init_agent(count):
             except:
                 pass
         int_sec = None 
-    # calculates num of agents initialized
-    global num_agents
-    for ag in agent.values():
-        if ag:
-            if ag.found:
-                num_agents += 1
+    if obj_type == 1:
+        # calculates num of agents initialized
+        global num_agents
+        for ag in agent.values():
+            if ag:
+                if ag.found:
+                    num_agents += 1
     # end of loop and clearing screen
     str_fin = 'Inicializacion terminada'
     fin = draw.draw_text(str_fin, location = (vpv_mid_x, vpv_mid_y + 50), color = 'white', font='Helvetica 20')
     time.sleep(1)
     draw.delete_figure(fin)
     print(str_fin)
-    print('Number of agents', str(num_agents))
-    # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
-    if num_agents > 0:
-        send_msg('0', 'F', 'AI', [str(num_agents)])
+    if obj_type == 1:
+        print('Number of agents', str(num_agents))
+        # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
+        if num_agents > 0:
+            send_msg('0', 'F', 'AI', [str(num_agents)])
+    else:
+        global init_objs
+        init_objs = False
+        print(objs)
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
@@ -555,6 +586,7 @@ def answer(val, d, c):
         i += 1
     return
 
+init_objs = False
 
 def main():
     sg.theme('Black')
@@ -616,27 +648,29 @@ def main():
                     # call to function to detect agents
                     manage_agent(frame, hsv)
                     # transform_center2get_angle(frame, 'blue', 'green')
-                    
+                    global vpv_mid_x
+                    global vpv_mid_y
+                    # gets the middle of the projection screen
+                    vpv_mid_x = int(vpv.u_max/2)
+                    vpv_mid_y = int(vpv.v_max/2) 
                     if event == '_obj_':
                         window['_obj_'].Update(visible = False)
+                        global init_objs
+                        init_objs = True
+                        obj_th = threading.Thread(target = init_obj, args=(2,))
+                        obj_th.start()
                     
-                    if event == '_agents_':  
-                        window['_agents_'].Update(visible = False)
-                        window['_obj_'].Update(visible = False)
+                    if event == '_agents_' and init_objs == False:  
                         # serial connection variable
                         global ser_port
                         # set global values used multiple times to print in projection gui
-                        global vpv_mid_x
-                        global vpv_mid_y
                         try:
                             # tries serial connection before start initialization
                             ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.01)  
-                            # gets the middle of the projection screen
-                            vpv_mid_x = int(vpv.u_max/2)
-                            vpv_mid_y = int(vpv.v_max/2) 
-                            
+                            window['_agents_'].Update(visible = False)
+                            window['_obj_'].Update(visible = False)
                             # start of thread that init timer
-                            thre = threading.Thread(target = init_agent, args=(count_secs,))
+                            thre = threading.Thread(target = init_obj, args=(1,))
                             thre.start()
                             # handles exception
                         except serial.SerialException:
