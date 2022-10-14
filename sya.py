@@ -447,8 +447,10 @@ def init_agent(count):
         aux_str = '' 
         text = None
         rect = None
+        i = 0
         # repeats until get to limit number given or until an agent is found
         while current_time < count and found == False:
+            i+=1
             # validates main gui
             if event == 'Finalizar' or event == sg.WIN_CLOSED: 
                 return
@@ -456,7 +458,8 @@ def init_agent(count):
             aux_str = str_time
             str_time = '{:02d}'.format((current_time // 100) % 60) 
             int_sec = int(str_time)  
-            print('Init..')
+            if i % 10000 == 0:
+                print('Init..')
             # manages and draws projection
             if aux_str != str_time:
                 if text:
