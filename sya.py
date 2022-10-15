@@ -236,6 +236,8 @@ def manage_masks(frame, hsv):
                 transform_points(frame, agnt)
                 
                 detect_objects(agnt, d_small, small_obj)
+                detect_objects(agnt, d_big, big_obj)
+                
     else:
         for color in obj_masks:
             generate_mask(frame, hsv, color) 
@@ -243,14 +245,19 @@ def manage_masks(frame, hsv):
 
 d_small = 8
 d_big = 12
+d_home = 15
+d_obs = 10
+
+
+def detect_home(this, d2detect):
+    if home:
+        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) 
 
 # avoid distance for agents
 def detect_objects(this, d2detect, ob_list):
     if len(ob_list) > 0:
         d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) + ob_list[0][3]
-        # print(d2ignore)
         final_d = d2detect + d2ignore
-        # print(final_d)
         for ob in ob_list:
             d = get_distance(this.cx, ob[0], this.cy, ob[1])
             print(d)
@@ -434,7 +441,8 @@ def generate_mask(frame, hsv, color):
                     big_obj = set_obj(big_obj, cx, cy, True)
                 elif len(approx) == 4 and color == 'yellow':
                     global home
-                    home = (cx, cy)
+                    # x, y, radius
+                    home = (cx, cy, 3)
                 elif len(approx) > 8 and color == 'yellow':
                     global small_obj
                     small_obj = set_obj(small_obj, cx, cy, True)
@@ -601,14 +609,13 @@ def init_obj(obj_type):
                 obj[2] = id_draw
                 obj[3] = 1.5
         if home:
-            a, _ = utils.w2vp(6, 0, vpv)
-            a = int(a)
+            r, _ = utils.w2vp(home[2], 0, vpv)
+            a = int(r*2)
             im = Image.open("house.png")
             im = im.resize((a, a))
-            a_r = int(a/2)
-            x, y = home
-            x, y = utils.w2vp(x, y, vpv)
-            draw.draw_image(data = image_to_data(im), location=(x - a_r, y + a_r))
+            x, y = utils.w2vp(home[0], home[1], vpv)
+            draw.draw_text('X', location=(x,y), color='white', font='Helvetica 12')
+            draw.draw_image(data = image_to_data(im), location=(x - r, y + r))
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
