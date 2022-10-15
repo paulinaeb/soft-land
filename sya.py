@@ -564,10 +564,6 @@ def init_obj(obj_type):
     draw.delete_figure(fin)
     print(str_fin)
     if obj_type == 1:
-        if home:
-            send_msg('0', 'F', 'HM', [str(home[0]), str(home[1])])
-        if len(obstacles) > 0:
-            pass
         print('Number of agents', str(num_agents))
         # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
         if num_agents > 0:
