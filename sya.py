@@ -44,8 +44,8 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-          'green': None
-        #   'yellow': None
+          'green': None,
+          'yellow': None
         }  
 
 # init agents with id and no attributes
@@ -365,7 +365,7 @@ def generate_mask(frame, hsv, color):
         approx = cv2.approxPolyDP(count, epsilon, True)
         # get area to work with only visible objects
         area = cv2.contourArea(count)
-        if area > 800:
+        if area > 600:
             # recognize rectangles 
             if len(approx) == 4 and color == 'black':
                     cx, cy = centroid(count)
@@ -383,17 +383,21 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-            elif color == 'blue' and init_objs == True and (len(approx) == 4 or len(approx) > 8):
+            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 8):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
                 cv2.drawContours(frame, [approx], 0, (0), 2)
-                if len(approx) == 4:
+                if len(approx) == 4 and color == 'blue':
                     global objs
                     objs = set_obj(objs, cx, cy)
-                else:
+                elif len(approx) > 8 and color == 'blue':
                     global moving_obj
                     moving_obj = set_obj(moving_obj, cx, cy)
+                elif len(approx) == 4 and color == 'yellow':
+                    pass
+                elif len(approx) > 8 and color == 'yellow':
+                    print(area)
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
