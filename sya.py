@@ -1,5 +1,7 @@
 # importing libraries 
 import PySimpleGUI as sg
+from io import BytesIO
+from PIL import Image
 import cv2
 import numpy as np 
 import math
@@ -57,7 +59,13 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 10
+count_secs = 5
+
+def image_to_data(im): 
+    with BytesIO() as output:
+        im.save(output, format="PNG")
+        data = output.getvalue()
+    return data
     
 # layout for first monitor
 def main_layout():
@@ -403,8 +411,8 @@ def generate_mask(frame, hsv, color):
                     global big_obj
                     big_obj = set_obj(big_obj, cx, cy)
                 elif len(approx) == 4 and color == 'yellow':
+                    global home
                     home = (cx, cy)
-                    print(home)
                 elif len(approx) > 8 and color == 'yellow':
                     global small_obj
                     small_obj = set_obj(small_obj, cx, cy)
@@ -570,6 +578,15 @@ def init_obj(obj_type):
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 draw.draw_circle((x, y), r, fill_color = 'purple1')
+        if home:
+            a, _ = utils.w2vp(6, 0, vpv)
+            a = int(a)
+            im = Image.open("house.png")
+            im = im.resize((a, a))
+            a_r = int(a/2)
+            x, y = home
+            x, y = utils.w2vp(x, y, vpv)
+            draw.draw_image(data = image_to_data(im), location=(x - a_r, y + a_r))
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
