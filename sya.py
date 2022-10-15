@@ -235,8 +235,9 @@ def manage_masks(frame, hsv):
                 show_draws(frame, agnt, circle_color) 
                 transform_points(frame, agnt)
                 
-                detect_objects(agnt, d_small, small_obj)
-                detect_objects(agnt, d_big, big_obj)
+                detect_objects(agnt, d_small, small_obj, False)
+                detect_objects(agnt, d_big, big_obj, False)
+                detect_objects(agnt, d_home, home, True)
                 
     else:
         for color in obj_masks:
@@ -248,21 +249,26 @@ d_big = 12
 d_home = 15
 d_obs = 10
 
-
-def detect_home(this, d2detect):
-    if home:
-        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) 
-
 # avoid distance for agents
-def detect_objects(this, d2detect, ob_list):
+def detect_objects(this, d2detect, ob_list, is_home):
     if len(ob_list) > 0:
-        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) + ob_list[0][3]
-        final_d = d2detect + d2ignore
-        for ob in ob_list:
-            d = get_distance(this.cx, ob[0], this.cy, ob[1])
+        if is_home:
+            r_ob = ob_list[2]
+        else:
+            r_ob = ob_list[0][3]
+        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) + r_ob
+        d_final = d2detect + d2ignore
+        if is_home:
+            d = get_distance(this.cx, ob_list[0], this.cy, ob_list[1])
             print(d)
-            if d <= final_d:
-                print('object detected')
+            if d <= d_final:
+                print('home detected')
+        else:
+            for ob in ob_list:
+                d = get_distance(this.cx, ob[0], this.cy, ob[1])
+                print(d)
+                if d <= d_final:
+                    print('object detected')
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -376,7 +382,7 @@ def transform_center2get_angle(frame, a, b):
 obstacles = []
 big_obj = []
 small_obj = []
-home = None
+home = []
 
 def set_obj(arr, cx, cy, is_movable):
     exists = False
@@ -428,7 +434,7 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 8):
+            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 10):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
@@ -442,7 +448,7 @@ def generate_mask(frame, hsv, color):
                 elif len(approx) == 4 and color == 'yellow':
                     global home
                     # x, y, radius
-                    home = (cx, cy, 3)
+                    home = [cx, cy, 3]
                 elif len(approx) > 8 and color == 'yellow':
                     global small_obj
                     small_obj = set_obj(small_obj, cx, cy, True)
@@ -608,7 +614,7 @@ def init_obj(obj_type):
                 id_draw = draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
                 obj[2] = id_draw
                 obj[3] = 1.5
-        if home:
+        if len(home) > 0:
             r, _ = utils.w2vp(home[2], 0, vpv)
             a = int(r*2)
             im = Image.open("house.png")
