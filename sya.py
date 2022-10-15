@@ -59,7 +59,7 @@ for col in agent.keys():
 # for timer
 int_sec = None
 # total of secs to count
-count_secs = 5
+count_secs = 10
 
 def image_to_data(im): 
     with BytesIO() as output:
@@ -442,7 +442,7 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 10):
+            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 14):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
@@ -628,7 +628,6 @@ def init_obj(obj_type):
             im = Image.open("house.png")
             im = im.resize((a, a))
             x, y = utils.w2vp(home[0], home[1], vpv)
-            draw.draw_text('X', location=(x,y), color='white', font='Helvetica 12')
             draw.draw_image(data = image_to_data(im), location=(x - r, y + r))
     return
 
