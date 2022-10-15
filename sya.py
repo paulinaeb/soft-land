@@ -572,12 +572,12 @@ def init_obj(obj_type):
         if len(big_obj) > 0:
             for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_circle((x, y), r, fill_color='light pink') 
+                draw.draw_circle((x, y), r, line_color='light pink') 
         if len(small_obj) > 0:
             r, _ = utils.w2vp(1.5, 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_circle((x, y), r, fill_color = 'purple1')
+                draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
         if home:
             a, _ = utils.w2vp(6, 0, vpv)
             a = int(a)
