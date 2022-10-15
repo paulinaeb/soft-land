@@ -45,8 +45,10 @@ rgb_white = (255, 255, 255)
 # colors of agent triangles
 agent = { 'blue': None,
           'green': None,
-          'yellow': None
+        #   'yellow': None
         }  
+
+obj_masks = ['blue', 'yellow']
 
 # init agents with id and no attributes
 for col in agent.keys():
@@ -184,45 +186,49 @@ def remove_figures(color):
     return
 
 
-def manage_agent(frame, hsv):
+def manage_masks(frame, hsv):
     # generate masks for every agent to detect the color required
-    for color in agent.keys():   
-        agnt = generate_mask(frame, hsv, color) 
+    if init_objs == False:
+        for color in agent.keys():   
+            agnt = generate_mask(frame, hsv, color) 
 
-        # if there is not agent detected, clears its draws if existed
-        if not agnt:  
-            if remove_figures(color): 
-                # clears the object
-                agent[color].set_out()  
-            
-        # if an agent is detected, clears previous draws if existed
-        elif agnt:
-            # start of init agent management validating time
-            if int_sec:
-                if count_secs >= int_sec >= 0 and agent[color].found == False and init_objs == False: 
-                    # send by serial
-                    agent[color].found = True
-                    # serialize message to send, from sand to all (command = Info ID) with one parameter
-                    send_msg('0', 'F', 'II', [str(agent[color].id)])
-                    str_found = 'Se encontró agente: '+color+' ID: '+str(agent[color].id)
-                    print(str_found)
-                    global msg
-                    msg = draw.draw_text(str_found, location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
-                    global found 
-                    found = True 
-                    
-            if remove_figures(color):
-                # drops draws from object
-                agent[color].draws = []
-            
-            # draws a circle verifying that there is nothing in its radius
-            if detect_agents(agnt): 
-                circle_color = 'red'
-            else: 
-                circle_color = 'green'  
-            # shows the draws corresponding to the agent in the projection
-            show_draws(frame, agnt, circle_color) 
-            transform_points(frame, agnt)
+            # if there is not agent detected, clears its draws if existed
+            if not agnt:  
+                if remove_figures(color): 
+                    # clears the object
+                    agent[color].set_out()  
+                
+            # if an agent is detected, clears previous draws if existed
+            elif agnt:
+                # start of init agent management validating time
+                if int_sec:
+                    if count_secs >= int_sec >= 0 and agent[color].found == False and init_objs == False: 
+                        # send by serial
+                        agent[color].found = True
+                        # serialize message to send, from sand to all (command = Info ID) with one parameter
+                        send_msg('0', 'F', 'II', [str(agent[color].id)])
+                        str_found = 'Se encontró agente: '+color+' ID: '+str(agent[color].id)
+                        print(str_found)
+                        global msg
+                        msg = draw.draw_text(str_found, location=(vpv_mid_x, vpv_mid_y+80), color = 'white', font='Helvetica 20')
+                        global found 
+                        found = True 
+                        
+                if remove_figures(color):
+                    # drops draws from object
+                    agent[color].draws = []
+                
+                # draws a circle verifying that there is nothing in its radius
+                if detect_agents(agnt): 
+                    circle_color = 'red'
+                else: 
+                    circle_color = 'green'  
+                # shows the draws corresponding to the agent in the projection
+                show_draws(frame, agnt, circle_color) 
+                transform_points(frame, agnt)
+    else:
+        for color in obj_masks:
+            generate_mask(frame, hsv, color) 
     return
 
 # detect agents around another (this)
@@ -668,7 +674,7 @@ def main():
                     cv2.putText(frame, (str(int(vpc_min[0]))+','+str(int(vpc_min[1]))), (int(vpc.u_min) - 10, int(vpc.v_min) + 15), 3, 0.5, rgb_white)
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
                     # call to function to detect agents
-                    manage_agent(frame, hsv)
+                    manage_masks(frame, hsv)
                     # transform_center2get_angle(frame, 'blue', 'green')
                     global vpv_mid_x
                     global vpv_mid_y
