@@ -337,9 +337,6 @@ def transform_center2get_angle(frame, a, b):
                 if yt < 0:
                     dir_angle = 360 + dir_angle   
                     
-            # if dir_angle > 180:
-            #     dir_angle = 360 - dir_angle
-            
             # shows distance
             cx, cy = utils.w2vp(agent[a].cx, agent[a].cy, vpc)
             cv2.putText(frame, 'd:'+str(d), (int(cx), int(cy)), 3, 0.5, rgb_white)
