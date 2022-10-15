@@ -343,8 +343,10 @@ def transform_center2get_angle(frame, a, b):
             print('distance:', d,' ', 'angle:',dir_angle)
     return
 
-objs = []
-moving_obj = []
+obstacles = []
+big_obj = []
+small_obj = []
+home = None
 
 def set_obj(arr, cx, cy):
     exists = False
@@ -395,15 +397,17 @@ def generate_mask(frame, hsv, color):
                 cx, cy =(math.floor(cx), math.floor(cy))
                 cv2.drawContours(frame, [approx], 0, (0), 2)
                 if len(approx) == 4 and color == 'blue':
-                    global objs
-                    objs = set_obj(objs, cx, cy)
+                    global obstacles
+                    obstacles = set_obj(obstacles, cx, cy)
                 elif len(approx) > 8 and color == 'blue':
-                    global moving_obj
-                    moving_obj = set_obj(moving_obj, cx, cy)
+                    global big_obj
+                    big_obj = set_obj(big_obj, cx, cy)
                 elif len(approx) == 4 and color == 'yellow':
-                    pass
+                    home = (cx, cy)
+                    print(home)
                 elif len(approx) > 8 and color == 'yellow':
-                    print(area)
+                    global small_obj
+                    small_obj = set_obj(small_obj, cx, cy)
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
@@ -553,16 +557,19 @@ def init_obj(obj_type):
         global init_objs
         init_objs = False
         r, _ = utils.w2vp(3, 0, vpv)
-        if len(objs) > 0:
-            print(objs)
-            for obj in objs:
+        if len(obstacles) > 0:
+            for obj in obstacles:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_rectangle((x - r, y - r), (x + r, y + r), fill_color='blue')
-        if len(moving_obj) > 0:
-            print(moving_obj)
-            for obj in moving_obj:
+                draw.draw_rectangle((x - r, y - r), (x + r, y + r), fill_color='brown4')
+        if len(big_obj) > 0:
+            for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_circle((x, y), r, fill_color='yellow') 
+                draw.draw_circle((x, y), r, fill_color='light pink') 
+        if len(small_obj) > 0:
+            r, _ = utils.w2vp(1.5, 0, vpv)
+            for obj in small_obj:
+                x, y = utils.w2vp(obj[0], obj[1], vpv)
+                draw.draw_circle((x, y), r, fill_color = 'purple1')
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
