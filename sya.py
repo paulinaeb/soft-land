@@ -239,6 +239,11 @@ def manage_masks(frame, hsv):
             generate_mask(frame, hsv, color) 
     return
 
+
+# avoid distance for agents
+agent_d = 10
+
+
 # detect agents around another (this)
 def detect_agents(this):
     # verifies distance between agents
@@ -449,17 +454,13 @@ def generate_mask(frame, hsv, color):
                      
                     #get angle of vertex (direction of agent)
                     direction = direction_angle(cx, cy, vx, vy)
-                    # print(cx, cy, vx, vy, direction)
                     
                     # convert position (cx cy) and (vx, vy) to world coordinates         
                     cx2, cy2 = utils.vp2w(cx, cy, vpc)
                     vx2, vy2 = utils.vp2w(vx, vy, vpc) 
                     
                     #distance between centroid and min angle vertex in world coordinates to get radius
-                    r = get_distance(cx2, vx2, cy2, vy2)  + 1 
-                    
-                    # print(cx2, cy2, vx2, vy2, r) 
-                    
+                    r = get_distance(cx2, vx2, cy2, vy2)  + 1.2
                     # display info on frame 
                     info = 'x: '+str(cx2)+'\ny:'+ str(cy2)+'\nt:'+str(direction)
                     info2 = 'x: '+str(cx2)+' y:'+ str(cy2)+' t:'+str(direction)
