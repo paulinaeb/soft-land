@@ -603,15 +603,19 @@ stop = False
 
 
 def read_msg():
-    read_val = ser_port.readline()
-    msg_read = read_val.decode()
-    if msg_read:
-        print(msg_read)
-        if msg_read != 'SS':
-            msg_received.append(msg_read)
-        else:
-            global stop
-            stop = True
+    try:
+        read_val = ser_port.readline()
+        msg_read = read_val.decode()
+        if msg_read:
+            print(msg_read)
+            if msg_read != 'SS':
+                msg_received.append(msg_read)
+            else:
+                global stop
+                stop = True
+    except serial.SerialException:
+        print('There was found a problem with your serial port connection. Please verify and try again.')
+        
     return
 
 
