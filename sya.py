@@ -234,15 +234,28 @@ def manage_masks(frame, hsv):
                 # shows the draws corresponding to the agent in the projection
                 show_draws(frame, agnt, circle_color) 
                 transform_points(frame, agnt)
+                
+                detect_objects(agnt, d_small, small_obj)
     else:
         for color in obj_masks:
             generate_mask(frame, hsv, color) 
     return
 
+d_small = 8
+d_big = 12
 
 # avoid distance for agents
-agent_d = 10
-
+def detect_objects(this, d2detect, ob_list):
+    if len(ob_list) > 0:
+        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) + ob_list[0][3]
+        # print(d2ignore)
+        final_d = d2detect + d2ignore
+        # print(final_d)
+        for ob in ob_list:
+            d = get_distance(this.cx, ob[0], this.cy, ob[1])
+            print(d)
+            if d <= final_d:
+                print('object detected')
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -362,8 +375,8 @@ def set_obj(arr, cx, cy, is_movable):
     exists = False
     if len(arr) == 0:
         if is_movable:
-            # x - y - id draw
-            arr.append([cx, cy, 0])
+            # x - y - id draw - radius
+            arr.append([cx, cy, 0, 0])
         else:
             arr.append([cx, cy])
     else:
@@ -372,7 +385,7 @@ def set_obj(arr, cx, cy, is_movable):
                 exists = True
         if exists == False:
             if is_movable:
-                arr.append([cx, cy, 0])
+                arr.append([cx, cy, 0, 0])
             else:
                 arr.append([cx, cy])
     return arr
@@ -579,12 +592,14 @@ def init_obj(obj_type):
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 id_draw = draw.draw_circle((x, y), r, line_color='light pink') 
                 obj[2] = id_draw
+                obj[3] = 3
         if len(small_obj) > 0:
             r, _ = utils.w2vp(1.5, 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 id_draw = draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
                 obj[2] = id_draw
+                obj[3] = 1.5
         if home:
             a, _ = utils.w2vp(6, 0, vpv)
             a = int(a)
