@@ -234,10 +234,10 @@ def manage_masks(frame, hsv):
                 # shows the draws corresponding to the agent in the projection
                 show_draws(frame, agnt, circle_color) 
                 transform_points(frame, agnt)
-                
-                detect_objects(agnt, d_small, small_obj, False)
-                detect_objects(agnt, d_big, big_obj, False)
-                detect_objects(agnt, d_home, home, True)
+                if num_agents > 0:
+                    detect_objects(agnt, d_small, small_obj, False, True, False)
+                    detect_objects(agnt, d_big, big_obj, False, False, True)
+                    detect_objects(agnt, d_home, home, True, False, False)
                 
     else:
         for color in obj_masks:
@@ -250,7 +250,7 @@ d_home = 15
 d_obs = 10
 
 # avoid distance for agents
-def detect_objects(this, d2detect, ob_list, is_home):
+def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
     if len(ob_list) > 0:
         if is_home:
             r_ob = ob_list[2]
@@ -263,12 +263,20 @@ def detect_objects(this, d2detect, ob_list, is_home):
             print(d)
             if d <= d_final:
                 print('home detected')
+                # sends position
+                send_msg('0', str(this.id), 'HO', [str(round(ob_list[0], 1)), str(round(ob_list[1], 1))])
         else:
             for ob in ob_list:
                 d = get_distance(this.cx, ob[0], this.cy, ob[1])
                 print(d)
                 if d <= d_final:
-                    print('object detected')
+                    if is_small:
+                        print('small object detected')
+                        c = 'SO'
+                    if is_big:
+                        print('big object detected')
+                        c = 'BO'
+                    send_msg('0', str(this.id), c, [str(round(ob[0], 1)), str(round(ob[1], 1))])
 
 # detect agents around another (this)
 def detect_agents(this):
