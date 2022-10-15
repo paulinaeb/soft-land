@@ -356,16 +356,23 @@ big_obj = []
 small_obj = []
 home = None
 
-def set_obj(arr, cx, cy):
+def set_obj(arr, cx, cy, is_movable):
     exists = False
     if len(arr) == 0:
-        arr.append((cx, cy))
+        if is_movable:
+            # x - y - id draw
+            arr.append([cx, cy, 0])
+        else:
+            arr.append([cx, cy])
     else:
         for obj in arr:
             if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
                 exists = True
         if exists == False:
-            arr.append((cx, cy))
+            if is_movable:
+                arr.append([cx, cy, 0])
+            else:
+                arr.append([cx, cy])
     return arr
 
 def generate_mask(frame, hsv, color):
@@ -406,16 +413,16 @@ def generate_mask(frame, hsv, color):
                 cv2.drawContours(frame, [approx], 0, (0), 2)
                 if len(approx) == 4 and color == 'blue':
                     global obstacles
-                    obstacles = set_obj(obstacles, cx, cy)
+                    obstacles = set_obj(obstacles, cx, cy, False)
                 elif len(approx) > 8 and color == 'blue':
                     global big_obj
-                    big_obj = set_obj(big_obj, cx, cy)
+                    big_obj = set_obj(big_obj, cx, cy, True)
                 elif len(approx) == 4 and color == 'yellow':
                     global home
                     home = (cx, cy)
                 elif len(approx) > 8 and color == 'yellow':
                     global small_obj
-                    small_obj = set_obj(small_obj, cx, cy)
+                    small_obj = set_obj(small_obj, cx, cy, True)
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
@@ -557,6 +564,10 @@ def init_obj(obj_type):
     draw.delete_figure(fin)
     print(str_fin)
     if obj_type == 1:
+        if home:
+            send_msg('0', 'F', 'HM', [str(home[0]), str(home[1])])
+        if len(obstacles) > 0:
+            pass
         print('Number of agents', str(num_agents))
         # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
         if num_agents > 0:
@@ -572,12 +583,14 @@ def init_obj(obj_type):
         if len(big_obj) > 0:
             for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_circle((x, y), r, line_color='light pink') 
+                id_draw = draw.draw_circle((x, y), r, line_color='light pink') 
+                obj[2] = id_draw
         if len(small_obj) > 0:
             r, _ = utils.w2vp(1.5, 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
+                id_draw = draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
+                obj[2] = id_draw
         if home:
             a, _ = utils.w2vp(6, 0, vpv)
             a = int(a)
