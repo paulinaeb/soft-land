@@ -275,8 +275,8 @@ def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
                         c = 'SO'
                     if is_big:
                         print('big object detected')
-                        c = 'BO'
-                    send_msg('0', str(this.id), c, [str(round(ob[0], 1)), str(round(ob[1], 1))])
+                        c = 'BO'                       # x                  # y                 #id_obj
+                    send_msg('0', str(this.id), c, [str(round(ob[0], 1)), str(round(ob[1], 1)), str(ob[2])])
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -442,7 +442,7 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 14):
+            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 12):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
