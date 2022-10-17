@@ -297,9 +297,12 @@ def detect_agents(this):
                         flag = flag + 1   
     limit_col = 2.5
     if this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius:
-        # send_msg('0', str(this.id))
+        if num_agents > 0:
+            send_msg('0', str(this.id), 'CL')
         return True
     if this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius:
+        if num_agents > 0:
+            send_msg('0', str(this.id), 'CL')
         return True
     if flag > 0:
         return True
