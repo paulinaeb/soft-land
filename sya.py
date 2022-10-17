@@ -297,6 +297,7 @@ def detect_agents(this):
                         flag = flag + 1   
     limit_col = 2.5
     if this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius:
+        # send_msg('0', str(this.id))
         return True
     if this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius:
         return True
@@ -314,10 +315,10 @@ def show_draws(frame, agnt, color):
     cxv, cyv = utils.w2vp(agnt.cx, agnt.cy, vpv)
     #draws
     if color == 'green':
-        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.18)), (0, 255, 0), 2)
+        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.28)), (0, 255, 0), 2)
     else:
         #red
-        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.18)), (0, 0, 255), 2)
+        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.28)), (0, 0, 255), 2)
        
     agnt.add_draws(draw.draw_circle((cxv, cyv), rv, line_color=color)) 
     agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 15'))
