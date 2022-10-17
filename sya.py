@@ -90,8 +90,8 @@ def draw_marks():
     draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
-    x, y = utils.w2vp(20, 25, vpv)
-    draw.draw_circle((x, y), 2, fill_color='white')
+    # x, y = utils.w2vp(52, 10, vpv)
+    # draw.draw_circle((x, y), 1, fill_color='white')
     return
 
 # clear projection in second monitor
@@ -295,10 +295,14 @@ def detect_agents(this):
                     # if the distance is lower than the radius sum, returns true
                     if d < r_sum: 
                         flag = flag + 1   
+    limit_col = 2.5
+    if this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius:
+        return True
+    if this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius:
+        return True
     if flag > 0:
         return True
-    else:
-        return False         
+    return False         
         
         
 def show_draws(frame, agnt, color):
@@ -310,10 +314,10 @@ def show_draws(frame, agnt, color):
     cxv, cyv = utils.w2vp(agnt.cx, agnt.cy, vpv)
     #draws
     if color == 'green':
-        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.25)), (0, 255, 0), 2)
+        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.18)), (0, 255, 0), 2)
     else:
         #red
-        cv2.circle(frame, (int(cxc), int(cyc)), int(rc), (0, 0, 255), 2)
+        cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.18)), (0, 0, 255), 2)
        
     agnt.add_draws(draw.draw_circle((cxv, cyv), rv, line_color=color)) 
     agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 15'))
