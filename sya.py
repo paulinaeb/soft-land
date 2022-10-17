@@ -442,7 +442,7 @@ def generate_mask(frame, hsv, color):
                         corner1 = []
                         corner2 = []
                         num_corner = 0
-            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 12):
+            elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 13):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
@@ -450,14 +450,14 @@ def generate_mask(frame, hsv, color):
                 if len(approx) == 4 and color == 'blue':
                     global obstacles
                     obstacles = set_obj(obstacles, cx, cy, False)
-                elif len(approx) > 8 and color == 'blue':
+                elif len(approx) > 13 and color == 'blue':
                     global big_obj
                     big_obj = set_obj(big_obj, cx, cy, True)
                 elif len(approx) == 4 and color == 'yellow':
                     global home
                     # x, y, radius
                     home = [cx, cy, 3]
-                elif len(approx) > 8 and color == 'yellow':
+                elif len(approx) > 13 and color == 'yellow' and area < 700:
                     global small_obj
                     small_obj = set_obj(small_obj, cx, cy, True)
             # recognize triangles        
