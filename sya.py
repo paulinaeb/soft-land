@@ -294,15 +294,24 @@ def detect_agents(this):
                     # print('this ', this.id,'b ', a.id, 'dis ', d, 'r sum ', r_sum) 
                     # if the distance is lower than the radius sum, returns true
                     if d < r_sum: 
-                        flag = flag + 1   
+                        flag += 1   
+                        if num_agents > 0:                      # dir   # dis
+                            send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
+                            send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
     limit_col = 2.5
     if this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius:
         if num_agents > 0:
-            send_msg('0', str(this.id), 'CL')
+            try:
+                send_msg('0', str(this.id), 'CL', [])
+            except serial.SerialException:
+                pass
         return True
     if this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius:
         if num_agents > 0:
-            send_msg('0', str(this.id), 'CL')
+            try:
+                send_msg('0', str(this.id), 'CL', [])
+            except serial.SerialException:
+                pass    
         return True
     if flag > 0:
         return True
@@ -653,19 +662,21 @@ stop = False
 
 
 def read_msg():
-    try:
-        read_val = ser_port.readline()
-        msg_read = read_val.decode()
-        if msg_read:
-            print(msg_read)
-            if msg_read != 'SS':
-                msg_received.append(msg_read)
-            else:
-                global stop
-                stop = True
-    except serial.SerialException:
-        print('There was found a problem with your serial port connection. Please verify and try again.')
-        
+    while True:
+        try:
+            read_val = ser_port.readline()
+            msg_read = read_val.decode()
+            if msg_read:
+                print(msg_read)
+                if msg_read != 'SS':
+                    msg_received.append(msg_read)
+                else:
+                    global stop
+                    stop = True
+        except serial.SerialException:
+            print('There was found a problem with your serial port connection. Please verify and try again.')
+        if event == 'Finalizar' or event == sg.WIN_CLOSED:
+            break
     return
 
 
@@ -673,10 +684,9 @@ def answer(val, d, c):
     global stop
     i = 0
     while True:
-        if i % 1000 == 0:
-            print(i, 'send')
+        if i % 10000 == 0:
+            print(i/10000)
         if val.cx and c == 'GP':
-            print('get pos')
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
             else:
@@ -712,6 +722,7 @@ def main():
     global draw
     draw = virtual_world['-GRAPH-']  
     draw_marks()  
+    com = False
     # Event loop that reads and displays frames 
     while True:
         global event
@@ -784,12 +795,13 @@ def main():
             else:
                 # clear_screen()        
                 pass
-            if num_agents > 0:
+            if num_agents > 0 and com == False:
+                com = True
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
-                if len(msg_received) > 0 and processing == False:
-                    t = threading.Thread(target=process_msg)
-                    t.start()
+            if len(msg_received) > 0 and processing == False:
+                t = threading.Thread(target=process_msg)
+                t.start()
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
@@ -801,8 +813,8 @@ def process_msg():
     global processing
     processing = True
     if len(msg_received[0]) >= 4:
-        print('on msg rec')
         com.deserialize(msg_received[0], obj_req)
+        print(obj_req.__dict__)
         if obj_req.d == '0':
             for val in agent.values():
                 if val:
