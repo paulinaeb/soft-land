@@ -262,9 +262,10 @@ def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
             d = get_distance(this.cx, ob_list[0], this.cy, ob_list[1])
             print(d)
             if d <= d_final:
-                print('home detected')
                 # sends position
-                send_msg('0', str(this.id), 'HO', [str(round(ob_list[0], 1)), str(round(ob_list[1], 1))])
+                if this.home == False:
+                    print('home detected')
+                    send_msg('0', str(this.id), 'HO', [str(round(ob_list[0], 1)), str(round(ob_list[1], 1))])
         else:
             for ob in ob_list:
                 d = get_distance(this.cx, ob[0], this.cy, ob[1])
@@ -299,23 +300,24 @@ def detect_agents(this):
                             send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
                             send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
     limit_col = 2.5
-    if this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius:
-        if num_agents > 0:
-            try:
-                send_msg('0', str(this.id), 'CL', [])
-            except serial.SerialException:
-                pass
-        return True
-    if this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius:
-        if num_agents > 0:
-            try:
-                send_msg('0', str(this.id), 'CL', [])
-            except serial.SerialException:
-                pass    
+    if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
+        send_collision(this.id)
         return True
     if flag > 0:
         return True
     return False         
+
+
+def send_collision(a_id):
+    if num_agents > 0:
+        for a in agent.values():
+            if a.id == a_id and a.collision == False:
+                try:
+                    send_msg('0', str(a_id), 'CL', [])
+                except serial.SerialException:
+                    pass
+                break
+    return     
         
         
 def show_draws(frame, agnt, color):
@@ -806,7 +808,6 @@ def process_msg(msg):
     if len(msg) >= 4:
         obj_req = com.Resp()
         com.deserialize(msg, obj_req)
-        print(obj_req.__dict__)
         if obj_req.d == '0':
             for val in agent.values():
                 if val:
@@ -850,6 +851,12 @@ def process_msg(msg):
                             send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
                         elif obj_req.c == 'SS':
                             stop[int(obj_req.f) - 1] = True
+                        elif obj_req.c == 'CL':
+                            val.collision = True
+                        elif obj_req.c == 'FC':
+                            val.collision = False
+                        elif obj_req.c == 'HO':
+                            val.home = True
     else:
         send_msg('0', 'F', 'NF', [])
     return
