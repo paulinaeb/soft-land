@@ -248,6 +248,7 @@ d_small = 8
 d_big = 12
 d_home = 15
 d_obs = 10
+d_collision = 6
 
 # avoid distance for agents
 def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
@@ -623,31 +624,42 @@ def init_obj(obj_type):
     else:
         global init_objs
         init_objs = False
-        r, _ = utils.w2vp(3, 0, vpv)
+        r = 3
+        r2v, _ = utils.w2vp(r, 0, vpv)
         if len(obstacles) > 0:
             for obj in obstacles:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_rectangle((x - r, y - r), (x + r, y + r), fill_color='brown4')
+                draw.draw_rectangle((x - r2v, y - r2v), (x + r2v, y + r2v), fill_color='brown4')
+                obj.append(r)
+            print('obs')
+            print(obstacles)
         if len(big_obj) > 0:
             for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                id_draw = draw.draw_circle((x, y), r, line_color='light pink') 
+                id_draw = draw.draw_circle((x, y), r2v, line_color='light pink') 
                 obj[2] = id_draw
-                obj[3] = 3
+                obj[3] = r
+            print('big o')
+            print(big_obj)
         if len(small_obj) > 0:
-            r, _ = utils.w2vp(1.5, 0, vpv)
+            r = 1.5
+            r2v, _ = utils.w2vp(r, 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                id_draw = draw.draw_circle((x, y), r, line_color = 'SeaGreen1')
+                id_draw = draw.draw_circle((x, y), r2v, line_color = 'SeaGreen1')
                 obj[2] = id_draw
-                obj[3] = 1.5
+                obj[3] = r
+            print('small o')
+            print(small_obj)
         if len(home) > 0:
-            r, _ = utils.w2vp(home[2], 0, vpv)
-            a = int(r*2)
+            r2v, _ = utils.w2vp(home[2], 0, vpv)
+            a = int(r2v*2)
             im = Image.open("house.png")
             im = im.resize((a, a))
             x, y = utils.w2vp(home[0], home[1], vpv)
-            draw.draw_image(data = image_to_data(im), location=(x - r, y + r))
+            draw.draw_image(data = image_to_data(im), location=(x - r2v, y + r2v))
+            print('home')
+            print(home)
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
@@ -684,6 +696,10 @@ def answer(f_id, val, d, c):
     global stop
     i = 0
     while True:
+        if stop[f_id - 1] == True:
+            print('stopped')
+            stop[f_id - 1] = False
+            break
         if i % 10000 == 0:
             print(i/10000)
         if val.cx and c == 'GP':
@@ -694,10 +710,6 @@ def answer(f_id, val, d, c):
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
-            break
-        elif stop[f_id - 1]:
-            print('stop searching')
-            stop[f_id - 1] = False
             break
         i += 1
     return
@@ -850,11 +862,14 @@ def process_msg(msg):
                         elif obj_req.c == 'CA' or obj_req.c == 'AR' or obj_req.c == 'FM':
                             send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
                         elif obj_req.c == 'SS':
+                            print('stop searching')
                             stop[int(obj_req.f) - 1] = True
                         elif obj_req.c == 'CL':
                             val.collision = True
+                            print('inited collision')
                         elif obj_req.c == 'FC':
                             val.collision = False
+                            print('finished collision')
                         elif obj_req.c == 'HO':
                             val.home = True
     else:
