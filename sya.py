@@ -657,8 +657,9 @@ def send_msg(f, d, c, p):
     return
 
 
-# msg_received = []
-stop = False
+stop = []
+for key in agent.keys():
+    stop.append(False)
 
 
 def read_msg():
@@ -668,12 +669,8 @@ def read_msg():
             msg_read = read_val.decode()
             if msg_read:
                 print(msg_read)
-                if msg_read != 'SS':
-                    t = threading.Thread(target=process_msg, args=(msg_read,))
-                    t.start()
-                else:
-                    global stop
-                    stop = True
+                t = threading.Thread(target=process_msg, args=(msg_read,))
+                t.start()
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -681,7 +678,7 @@ def read_msg():
     return
 
 
-def answer(val, d, c):
+def answer(f_id, val, d, c):
     global stop
     i = 0
     while True:
@@ -696,9 +693,9 @@ def answer(val, d, c):
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
-        elif stop:
+        elif stop[f_id - 1]:
             print('stop searching')
-            stop = False
+            stop[f_id - 1] = False
             break
         i += 1
     return
@@ -814,15 +811,14 @@ def process_msg(msg):
             for val in agent.values():
                 if val:
                     if (val.found is True) and (str(val.id) == obj_req.f):
-                        # type of commands here...
                         # get position
                         if obj_req.c == 'GP':
                             if len(obj_req.p) == 0:
-                                answer(val, obj_req.f, obj_req.c)
+                                answer(int(obj_req.f), val, obj_req.f, obj_req.c)
                             else:
                                 for a in agent.values():
                                     if str(a.id) == obj_req.p[0]:
-                                        answer(a, obj_req.f, obj_req.c)
+                                        answer(int(obj_req.f), a, obj_req.f, obj_req.c)
                                         break
                         # who are near me
                         elif obj_req.c == 'WN':
@@ -852,6 +848,8 @@ def process_msg(msg):
                              # call agent         # agent arrived      # follow me
                         elif obj_req.c == 'CA' or obj_req.c == 'AR' or obj_req.c == 'FM':
                             send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
+                        elif obj_req.c == 'SS':
+                            stop[int(obj_req.f) - 1] = True
     else:
         send_msg('0', 'F', 'NF', [])
     return
