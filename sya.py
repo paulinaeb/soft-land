@@ -25,7 +25,7 @@ num_agents = 0
 
 # obj for serial communication
 obj_resp = com.Resp()
-obj_req = com.Resp()
+# obj_req = com.Resp()
 
 # viewport for projector
 vpv = utils.ViewPort('video')
@@ -657,7 +657,7 @@ def send_msg(f, d, c, p):
     return
 
 
-msg_received = []
+# msg_received = []
 stop = False
 
 
@@ -669,7 +669,8 @@ def read_msg():
             if msg_read:
                 print(msg_read)
                 if msg_read != 'SS':
-                    msg_received.append(msg_read)
+                    t = threading.Thread(target=process_msg, args=(msg_read,))
+                    t.start()
                 else:
                     global stop
                     stop = True
@@ -799,21 +800,15 @@ def main():
                 com = True
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
-            if len(msg_received) > 0 and processing == False:
-                t = threading.Thread(target=process_msg)
-                t.start()
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
             
             
-processing = False           
-            
-def process_msg():
-    global processing
-    processing = True
-    if len(msg_received[0]) >= 4:
-        com.deserialize(msg_received[0], obj_req)
+def process_msg(msg):
+    if len(msg) >= 4:
+        obj_req = com.Resp()
+        com.deserialize(msg, obj_req)
         print(obj_req.__dict__)
         if obj_req.d == '0':
             for val in agent.values():
@@ -859,8 +854,6 @@ def process_msg():
                             send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
     else:
         send_msg('0', 'F', 'NF', [])
-    msg_received.pop(0)
-    processing = False
     return
             
 
