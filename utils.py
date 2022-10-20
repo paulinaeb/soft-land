@@ -31,7 +31,7 @@ class Agent:
         self.found = False
         self.home = False
         self.collision = False
-        self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = None 
+        self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = self.name = None 
     def set_values(self, cx, cy, vx, vy, r, direction, info): 
         self.cx = cx
         self.cy = cy 

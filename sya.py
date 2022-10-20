@@ -248,7 +248,7 @@ d_small = 8
 d_big = 12
 d_home = 15
 d_obs = 10
-d_collision = 6
+d_collision = 3
 
 # avoid distance for agents
 def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
@@ -304,6 +304,11 @@ def detect_agents(this):
     if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
         send_collision(this.id)
         return True
+    for ob in obstacles:
+        d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
+        if d2ob < this.radius + ob[2] + d_collision:
+            send_collision(this.id)
+            return True
     if flag > 0:
         return True
     return False         
@@ -343,6 +348,8 @@ def show_draws(frame, agnt, color):
         vx, vy = utils.w2vp(agnt.vx + 5, agnt.vy + 5, vpv)
     else:
         vx, vy = utils.w2vp(agnt.vx - 5, agnt.vy - 5, vpv)
+    if agnt.name: 
+        agnt.info = str(agnt.name) +'\n'+ agnt.info
     agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
     
     return
@@ -679,18 +686,17 @@ for key in agent.keys():
 def read_msg():
     while True:
         try:
-            read_val = ser_port.readline()
-            msg_read = read_val.decode()
+            msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
-                t = threading.Thread(target=process_msg, args=(msg_read,))
-                t.start()
+                rec_msg.append(msg_read)
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
     return
 
+rec_msg = []
 
 def answer(f_id, val, d, c):
     global stop
@@ -721,7 +727,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     recording = False
     for m in get_monitors():  
         x_init = m.x 
@@ -811,6 +817,10 @@ def main():
                 com = True
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
+            if len(rec_msg) > 0:
+                t = threading.Thread(target=process_msg, args=(rec_msg[0],))
+                t.start()
+                rec_msg.pop(0)
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
@@ -862,16 +872,15 @@ def process_msg(msg):
                         elif obj_req.c == 'CA' or obj_req.c == 'AR' or obj_req.c == 'FM':
                             send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
                         elif obj_req.c == 'SS':
-                            print('stop searching')
                             stop[int(obj_req.f) - 1] = True
                         elif obj_req.c == 'CL':
                             val.collision = True
-                            print('inited collision')
                         elif obj_req.c == 'FC':
                             val.collision = False
-                            print('finished collision')
                         elif obj_req.c == 'HO':
                             val.home = True
+                        elif obj_req.c == 'NM':
+                            val.name = obj_req.p[0]
     else:
         send_msg('0', 'F', 'NF', [])
     return
