@@ -351,7 +351,6 @@ def show_draws(frame, agnt, color):
     if agnt.name: 
         agnt.info = str(agnt.name) +'\n'+ agnt.info
     agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
-    
     return
 
 
@@ -874,8 +873,10 @@ def process_msg(msg):
                         elif obj_req.c == 'SS':
                             stop[int(obj_req.f) - 1] = True
                         elif obj_req.c == 'CL':
+                            send_msg('0', obj_req.f, 'IC', [])
                             val.collision = True
                         elif obj_req.c == 'FC':
+                            send_msg('0', obj_req.f, 'FC', [])
                             val.collision = False
                         elif obj_req.c == 'HO':
                             val.home = True
