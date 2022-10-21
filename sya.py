@@ -248,7 +248,7 @@ d_small = 8
 d_big = 12
 d_home = 15
 d_obs = 10
-d_collision = 3
+d_collision = 2
 
 # avoid distance for agents
 def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
@@ -261,24 +261,23 @@ def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
         d_final = d2detect + d2ignore
         if is_home:
             d = get_distance(this.cx, ob_list[0], this.cy, ob_list[1])
-            print(d)
             if d <= d_final:
                 # sends position
                 if this.home == False:
-                    print('home detected')
-                    send_msg('0', str(this.id), 'HO', [str(round(ob_list[0], 1)), str(round(ob_list[1], 1))])
+                    send_msg('0', str(this.id), 'HO', [str(ob_list[0]), str(ob_list[1]), str(round(d2ignore))])
         else:
-            for ob in ob_list:
-                d = get_distance(this.cx, ob[0], this.cy, ob[1])
-                print(d)
-                if d <= d_final:
-                    if is_small:
-                        print('small object detected')
-                        c = 'SO'
-                    if is_big:
-                        print('big object detected')
-                        c = 'BO'                       # x                  # y                 #id_obj
-                    send_msg('0', str(this.id), c, [str(round(ob[0], 1)), str(round(ob[1], 1)), str(ob[2])])
+            if this.searching:
+                for ob in ob_list:
+                    d = get_distance(this.cx, ob[0], this.cy, ob[1])
+                    if d <= d_final:
+                        if is_small:
+                            print('small object detected')
+                            c = 'SO'
+                            send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
+                        if is_big and num_agents > 1:
+                            print('big object detected')
+                            c = 'BO'                            # x          # y      #id_obj    # sum of radius
+                            send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -309,9 +308,21 @@ def detect_agents(this):
         if d2ob < this.radius + ob[2] + d_collision:
             send_collision(this.id)
             return True
+    if this.searching == False:
+        if col2objects(this, small_obj) or col2objects(this, big_obj):
+            return True
     if flag > 0:
         return True
-    return False         
+    return False     
+
+
+def col2objects(this, objs):
+    for ob in objs:
+        d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
+        if d2ob < this.radius + ob[3] + d_collision:
+            send_collision(this.id)
+            return True
+    return False
 
 
 def send_collision(a_id):
@@ -726,7 +737,7 @@ def main():
     # create the window and show it without the plot
     window = sg.Window('Entorno Virtual', main_layout(), element_justification='c', location=(350, 100))
     #indicates which camera use
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     recording = False
     for m in get_monitors():  
         x_init = m.x 
@@ -876,12 +887,20 @@ def process_msg(msg):
                             send_msg('0', obj_req.f, 'IC', [])
                             val.collision = True
                         elif obj_req.c == 'FC':
-                            send_msg('0', obj_req.f, 'FC', [])
+                            send_msg('0', obj_req.f, obj_req.c, [])
                             val.collision = False
                         elif obj_req.c == 'HO':
                             val.home = True
                         elif obj_req.c == 'NM':
                             val.name = obj_req.p[0]
+                        elif obj_req.c == 'SC':
+                            send_msg('0', obj_req.f, obj_req.c, [])
+                            val.searching = True
+                        elif obj_req.c == 'FS':
+                            send_msg('0', obj_req.f, obj_req.c, [])
+                            val.searching = False
+                        elif obj_req.c in ('SO', 'BO'):
+                            send_msg('0', obj_req.f, 'TO', [])
     else:
         send_msg('0', 'F', 'NF', [])
     return
