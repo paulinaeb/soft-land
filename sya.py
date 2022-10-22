@@ -244,10 +244,9 @@ def manage_masks(frame, hsv):
             generate_mask(frame, hsv, color) 
     return
 
-d_small = 8
-d_big = 12
-d_home = 15
-d_obs = 10
+d_small = 10
+d_big = 20
+d_home = 25
 d_collision = 2
 
 # avoid distance for agents
@@ -266,7 +265,7 @@ def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
                 if this.home == False:
                     send_msg('0', str(this.id), 'HO', [str(ob_list[0]), str(ob_list[1]), str(round(d2ignore))])
         else:
-            if this.searching:
+            if this.searching == True and this.busy == False:
                 for ob in ob_list:
                     d = get_distance(this.cx, ob[0], this.cy, ob[1])
                     if d <= d_final:
@@ -834,6 +833,13 @@ def main():
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
+
+
+def take_obj(id_obj, ob_list):
+    for ob in ob_list:
+        if ob[2] == id_obj:
+            draw.delete_figure(id_obj)
+            break
             
             
 def process_msg(msg):
@@ -899,8 +905,16 @@ def process_msg(msg):
                         elif obj_req.c == 'FS':
                             send_msg('0', obj_req.f, obj_req.c, [])
                             val.searching = False
+                        elif obj_req.c == 'BU':
+                            send_msg('0', obj_req.f, obj_req.c, [])
+                            val.busy = True
                         elif obj_req.c in ('SO', 'BO'):
                             send_msg('0', obj_req.f, 'TO', [])
+                            id_obj = int(obj_req.p[0])
+                            if obj_req.c == 'SO':
+                                take_obj(id_obj, small_obj)
+                            else:
+                                take_obj(id_obj, big_obj)
     else:
         send_msg('0', 'F', 'NF', [])
     return
