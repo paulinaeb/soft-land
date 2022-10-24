@@ -24,7 +24,7 @@ msg = None
 num_agents = 0
 
 # obj for serial communication
-obj_resp = com.Resp()
+# obj_resp = com.Resp()
 # obj_req = com.Resp()
 
 # viewport for projector
@@ -493,7 +493,7 @@ def generate_mask(frame, hsv, color):
                     global home
                     # x, y, radius
                     home = [cx, cy, 3]
-                elif len(approx) > 13 and color == 'yellow' and area < 700:
+                elif len(approx) > 13 and color == 'yellow' and area < 850:
                     global small_obj
                     small_obj = set_obj(small_obj, cx, cy, True)
             # recognize triangles        
@@ -647,16 +647,12 @@ def init_obj(obj_type):
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 draw.draw_rectangle((x - r2v, y - r2v), (x + r2v, y + r2v), fill_color='brown4')
                 obj.append(r)
-            print('obs')
-            print(obstacles)
         if len(big_obj) > 0:
             for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 id_draw = draw.draw_circle((x, y), r2v, line_color='light pink') 
                 obj[2] = id_draw
                 obj[3] = r
-            print('big o')
-            print(big_obj)
         if len(small_obj) > 0:
             r = 1.5
             r2v, _ = utils.w2vp(r, 0, vpv)
@@ -665,8 +661,6 @@ def init_obj(obj_type):
                 id_draw = draw.draw_circle((x, y), r2v, line_color = 'SeaGreen1')
                 obj[2] = id_draw
                 obj[3] = r
-            print('small o')
-            print(small_obj)
         if len(home) > 0:
             r2v, _ = utils.w2vp(home[2], 0, vpv)
             a = int(r2v*2)
@@ -674,12 +668,17 @@ def init_obj(obj_type):
             im = im.resize((a, a))
             x, y = utils.w2vp(home[0], home[1], vpv)
             draw.draw_image(data = image_to_data(im), location=(x - r2v, y + r2v))
-            print('home')
-            print(home)
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
 def send_msg(f, d, c, p):
+    th = threading.Thread(target = th_send, args=(f, d, c, p,))
+    th.start()
+    return
+
+
+def th_send(f, d, c, p):
+    obj_resp = com.Resp()
     obj_resp.set_values(f, d, c, p)
     ser_msg = com.serialize(obj_resp)
     ser_port.write((ser_msg+',').encode())
