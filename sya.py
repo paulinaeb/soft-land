@@ -23,13 +23,8 @@ found = None
 msg = None
 num_agents = 0
 
-# obj for serial communication
-# obj_resp = com.Resp()
-# obj_req = com.Resp()
-
 # viewport for projector
 vpv = utils.ViewPort('video')
-
 # viewport for camera
 vpc = utils.ViewPort('camera')
 
@@ -60,6 +55,12 @@ for col in agent.keys():
 int_sec = None
 # total of secs to count
 count_secs = 10
+# distance
+d_small = 10
+d_big = 20
+d_home = 25
+d_collision = 2
+
 
 def image_to_data(im): 
     with BytesIO() as output:
@@ -75,8 +76,7 @@ def main_layout():
               [sg.Button('Iniciar', size=(8, 1), font='Helvetica 12', key='Iniciar'),
                sg.pin(sg.Button('Inicializar objetos', size=(15, 1),  font='Helvetica 12', key='_obj_', visible=False)),
                sg.pin(sg.Button('Inicializar agentes', size=(15, 1),  font='Helvetica 12', key='_agents_', visible=False)),
-               sg.Button('Finalizar', size=(8, 1),  font='Helvetica 12')
-               ]] 
+               sg.Button('Finalizar', size=(8, 1),  font='Helvetica 12')]] 
     return layout
 
 # layout for second monitor
@@ -244,11 +244,6 @@ def manage_masks(frame, hsv):
             generate_mask(frame, hsv, color) 
     return
 
-d_small = 10
-d_big = 20
-d_home = 25
-d_collision = 2
-
 # avoid distance for agents
 def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
     if len(ob_list) > 0:
@@ -361,6 +356,10 @@ def show_draws(frame, agnt, color):
     if agnt.name: 
         agnt.info = str(agnt.name) +'\n'+ agnt.info
     agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
+    if agnt.has_small:
+        r2v, _ = utils.w2vp(1.5, 0, vpv)
+        for i in range(agnt.has_small):
+            agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'SeaGreen1'))
     return
 
 
@@ -686,33 +685,34 @@ def th_send(f, d, c, p):
     return
 
 
-stop = []
-for key in agent.keys():
-    stop.append(False)
-
-
 def read_msg():
     while True:
         try:
             msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
-                rec_msg.append(msg_read)
+                for a in agent.values():
+                    if msg_read[0] == str(a.id):
+                        if msg_read[2:4] == 'SS':
+                            if a.processing:
+                                a.ss = True
+                        else:
+                            a.msg_queue.append(msg_read)
+                        break
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
     return
 
-rec_msg = []
 
 def answer(f_id, val, d, c):
     global stop
     i = 0
     while True:
-        if stop[f_id - 1] == True:
+        if val.ss:
             print('stopped')
-            stop[f_id - 1] = False
+            val.ss = False
             break
         if i % 10000 == 0:
             print(i/10000)
@@ -748,7 +748,7 @@ def main():
     global draw
     draw = virtual_world['-GRAPH-']  
     draw_marks()  
-    com = False
+    ser_com = False
     # Event loop that reads and displays frames 
     while True:
         global event
@@ -821,101 +821,110 @@ def main():
             else:
                 # clear_screen()        
                 pass
-            if num_agents > 0 and com == False:
-                com = True
+            if num_agents and not ser_com:
+                for i in agent.values():
+                    i.res = com.Resp()
+                ser_com = True
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
-            if len(rec_msg) > 0:
-                t = threading.Thread(target=process_msg, args=(rec_msg[0],))
-                t.start()
-                rec_msg.pop(0)
+            for i in agent.values():
+                if len(i.msg_queue) > 0 and not i.processing:
+                    print(i.msg_queue)
+                    t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
+                    t.start()
+
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
 
 
-def take_obj(id_obj, ob_list):
+def take_obj(id_obj, ob_list, agent):
+    i = 0
     for ob in ob_list:
         if ob[2] == id_obj:
             draw.delete_figure(id_obj)
+            agent.has_small += 1
+            ob_list.pop(i)
             break
+        i += 1
             
             
-def process_msg(msg):
-    if len(msg) >= 4:
-        obj_req = com.Resp()
-        com.deserialize(msg, obj_req)
-        if obj_req.d == '0':
+def process_msg(queue, res, i):
+    i.processing = True
+    if len(queue[0]) > 3:
+        print('processing', queue[0])
+        com.deserialize(queue[0], res)
+        if res.d == '0':
             for val in agent.values():
                 if val:
-                    if (val.found is True) and (str(val.id) == obj_req.f):
+                    if (val.found is True) and (str(val.id) == res.f):
                         # get position
-                        if obj_req.c == 'GP':
-                            if len(obj_req.p) == 0:
-                                answer(int(obj_req.f), val, obj_req.f, obj_req.c)
+                        if res.c == 'GP':
+                            if len(res.p) == 0:
+                                answer(int(res.f), val, res.f, res.c)
                             else:
                                 for a in agent.values():
-                                    if str(a.id) == obj_req.p[0]:
-                                        answer(int(obj_req.f), a, obj_req.f, obj_req.c)
+                                    if str(a.id) == res.p[0]:
+                                        answer(int(res.f), a, res.f, res.c)
                                         break
                         # who are near me
-                        elif obj_req.c == 'WN':
-                            res = ''
+                        elif res.c == 'WN':
+                            resp = ''
                             flag = 0
                             if num_agents > 1:
                                 for a in agent.values():
                                     if a:
-                                        if str(a.id) != obj_req.f and a.found == True:
+                                        if str(a.id) != res.f and a.found == True:
                                             for i in range(45):
                                                 if a.cx and val.cx:
-                                                    d_max = int(obj_req.p[0]) 
+                                                    d_max = int(res.p[0]) 
                                                     d = get_distance(a.cx, val.cx, val.cy, a.cy)  
                                                     r_sum = a.radius + val.radius
                                                     d_total = d - r_sum
                                                     if d_total <= d_max:
                                                         print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
-                                                        res += str(a.id)
+                                                        resp += str(a.id)
                                                         flag += 1
                                                     break
-                            print('res', res)
+                            print('res', resp)
                             if flag > 0:
-                                p = [res]
+                                p = [resp]
                             else:
                                 p = '0'
-                            send_msg('0', obj_req.f, obj_req.c, [p])
-                             # call agent         # agent arrived      # follow me
-                        elif obj_req.c == 'CA' or obj_req.c == 'AR' or obj_req.c == 'FM':
-                            send_msg('0', obj_req.p[0], obj_req.c, [obj_req.f])
-                        elif obj_req.c == 'SS':
-                            stop[int(obj_req.f) - 1] = True
-                        elif obj_req.c == 'CL':
-                            send_msg('0', obj_req.f, 'IC', [])
+                            send_msg('0', res.f, res.c, [p])
+                            # call agent         # agent arrived      # follow me
+                        elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
+                            send_msg('0', res.p[0], res.c, [res.f])
+                        elif res.c == 'CL':
+                            send_msg('0', res.f, 'IC', [])
                             val.collision = True
-                        elif obj_req.c == 'FC':
-                            send_msg('0', obj_req.f, obj_req.c, [])
+                        elif res.c == 'FC':
+                            send_msg('0', res.f, res.c, [])
                             val.collision = False
-                        elif obj_req.c == 'HO':
+                        elif res.c == 'HO':
                             val.home = True
-                        elif obj_req.c == 'NM':
-                            val.name = obj_req.p[0]
-                        elif obj_req.c == 'SC':
-                            send_msg('0', obj_req.f, obj_req.c, [])
+                        elif res.c == 'NM':
+                            val.name = res.p[0]
+                        elif res.c == 'SC':
+                            send_msg('0', res.f, res.c, [])
                             val.searching = True
-                        elif obj_req.c == 'FS':
-                            send_msg('0', obj_req.f, obj_req.c, [])
+                        elif res.c == 'FS':
+                            send_msg('0', res.f, res.c, [])
                             val.searching = False
-                        elif obj_req.c == 'BU':
-                            send_msg('0', obj_req.f, obj_req.c, [])
+                        elif res.c == 'BU':
+                            send_msg('0', res.f, res.c, [])
                             val.busy = True
-                        elif obj_req.c in ('SO', 'BO'):
-                            send_msg('0', obj_req.f, 'TO', [])
-                            id_obj = int(obj_req.p[0])
-                            if obj_req.c == 'SO':
-                                take_obj(id_obj, small_obj)
+                        elif res.c in ('SO', 'BO'):
+                            id_obj = int(res.p[0])
+                            if res.c == 'SO':
+                                take_obj(id_obj, small_obj, val)
                             else:
-                                take_obj(id_obj, big_obj)
+                                take_obj(id_obj, big_obj, val)
+                            send_msg('0', res.f, 'TO', [])
     else:
         send_msg('0', 'F', 'NF', [])
+    queue.pop(0)
+    i.processing = False
     return
             
 

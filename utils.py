@@ -33,6 +33,12 @@ class Agent:
         self.collision = False
         self.searching = False
         self.busy = False
+        self.has_small = 0
+        self.has_big = False
+        self.msg_queue = []
+        self.ss = False
+        self.res = None
+        self.processing = False
         self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = self.name = None 
     def set_values(self, cx, cy, vx, vy, r, direction, info): 
         self.cx = cx
