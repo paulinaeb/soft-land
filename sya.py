@@ -41,7 +41,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-          'green': None,
+        #  'green': None,
         #   'yellow': None
         }  
 
@@ -90,8 +90,8 @@ def draw_marks():
     draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
-    # x, y = utils.w2vp(52, 10, vpv)
-    # draw.draw_circle((x, y), 1, fill_color='white')
+    x, y = utils.w2vp(50, 30, vpv)
+    draw.draw_circle((x, y), 1, fill_color='white')
     return
 
 # clear projection in second monitor
@@ -290,7 +290,7 @@ def detect_agents(this):
                     # if the distance is lower than the radius sum, returns true
                     if d < r_sum: 
                         flag += 1   
-                        if num_agents > 0:                      # dir   # dis
+                        if num_agents:                      # dir   # dis
                             send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
                             send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
     limit_col = 2.5
@@ -302,10 +302,10 @@ def detect_agents(this):
         if d2ob < this.radius + ob[2] + d_collision:
             send_collision(this.id)
             return True
-    if this.searching == False:
+    if not this.searching:
         if col2objects(this, small_obj) or col2objects(this, big_obj):
             return True
-    if flag > 0:
+    if flag:
         return True
     return False     
 
@@ -320,9 +320,9 @@ def col2objects(this, objs):
 
 
 def send_collision(a_id):
-    if num_agents > 0:
+    if num_agents:
         for a in agent.values():
-            if a.id == a_id and a.collision == False:
+            if a.id == a_id and not a.collision:
                 try:
                     send_msg('0', str(a_id), 'CL', [])
                 except serial.SerialException:
@@ -429,7 +429,7 @@ home = []
 
 def set_obj(arr, cx, cy, is_movable):
     exists = False
-    if len(arr) == 0:
+    if len(arr):
         if is_movable:
             # x - y - id draw - radius
             arr.append([cx, cy, 0, 0])
@@ -439,7 +439,7 @@ def set_obj(arr, cx, cy, is_movable):
         for obj in arr:
             if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
                 exists = True
-        if exists == False:
+        if not exists:
             if is_movable:
                 arr.append([cx, cy, 0, 0])
             else:
@@ -504,7 +504,7 @@ def generate_mask(frame, hsv, color):
                 n = approx.ravel()
                 i = 0
                 for j in n :
-                    if(i % 2 == 0):
+                    if not (i % 2):
                         x = n[i]
                         y = n[i + 1] 
                         # this verifies that every vertex is in the region of the viewport 
@@ -634,7 +634,7 @@ def init_obj(obj_type):
     if obj_type == 1:
         print('Number of agents', str(num_agents))
         # send msg to agents: number of agents on sandbox from sand to all (command = AI) with one parameter
-        if num_agents > 0:
+        if num_agents:
             send_msg('0', 'F', 'AI', [str(num_agents)])
     else:
         global init_objs
@@ -680,7 +680,11 @@ def th_send(f, d, c, p):
     obj_resp = com.Resp()
     obj_resp.set_values(f, d, c, p)
     ser_msg = com.serialize(obj_resp)
-    ser_port.write((ser_msg+',').encode())
+    try:
+        ser_port.write((ser_msg+',').encode())
+    except serial.SerialException:
+        th_send(f, d, c, p)
+        return
     print('Sent:', ser_msg)
     return
 
@@ -691,14 +695,17 @@ def read_msg():
             msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
+                flag = True
                 for a in agent.values():
                     if msg_read[0] == str(a.id):
                         if msg_read[2:4] == 'SS':
                             if a.processing:
                                 a.ss = True
-                        else:
-                            a.msg_queue.append(msg_read)
-                        break
+                            send_msg('0', msg_read[0], 'SS', [])
+                            flag = False
+                            break
+                if flag:
+                    a.msg_queue.append(msg_read)
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -852,12 +859,11 @@ def take_obj(id_obj, ob_list, agent):
 def process_msg(queue, res, i):
     i.processing = True
     if len(queue[0]) > 3:
-        print('processing', queue[0])
         com.deserialize(queue[0], res)
         if res.d == '0':
             for val in agent.values():
                 if val:
-                    if (val.found is True) and (str(val.id) == res.f):
+                    if val.found and str(val.id) == res.f:
                         # get position
                         if res.c == 'GP':
                             if len(res.p) == 0:
@@ -867,31 +873,6 @@ def process_msg(queue, res, i):
                                     if str(a.id) == res.p[0]:
                                         answer(int(res.f), a, res.f, res.c)
                                         break
-                        # who are near me
-                        elif res.c == 'WN':
-                            resp = ''
-                            flag = 0
-                            if num_agents > 1:
-                                for a in agent.values():
-                                    if a:
-                                        if str(a.id) != res.f and a.found == True:
-                                            for i in range(45):
-                                                if a.cx and val.cx:
-                                                    d_max = int(res.p[0]) 
-                                                    d = get_distance(a.cx, val.cx, val.cy, a.cy)  
-                                                    r_sum = a.radius + val.radius
-                                                    d_total = d - r_sum
-                                                    if d_total <= d_max:
-                                                        print('d', d, 'r sum', r_sum, 'd total', d_total, 'id', a.id)
-                                                        resp += str(a.id)
-                                                        flag += 1
-                                                    break
-                            print('res', resp)
-                            if flag > 0:
-                                p = [resp]
-                            else:
-                                p = '0'
-                            send_msg('0', res.f, res.c, [p])
                             # call agent         # agent arrived      # follow me
                         elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
                             send_msg('0', res.p[0], res.c, [res.f])
@@ -904,7 +885,11 @@ def process_msg(queue, res, i):
                         elif res.c == 'HO':
                             val.home = True
                         elif res.c == 'NM':
-                            val.name = res.p[0]
+                            if res.p:
+                                val.name = res.p[0]
+                                send_msg('0', res.f, res.c, [])
+                            else:
+                                send_msg('0', 'F', 'NF', [])
                         elif res.c == 'SC':
                             send_msg('0', res.f, res.c, [])
                             val.searching = True
@@ -914,6 +899,9 @@ def process_msg(queue, res, i):
                         elif res.c == 'BU':
                             send_msg('0', res.f, res.c, [])
                             val.busy = True
+                        elif res.c == 'NB':
+                            send_msg('0', res.f, res.c, [])
+                            val.busy = False    
                         elif res.c in ('SO', 'BO'):
                             id_obj = int(res.p[0])
                             if res.c == 'SO':
@@ -921,6 +909,12 @@ def process_msg(queue, res, i):
                             else:
                                 take_obj(id_obj, big_obj, val)
                             send_msg('0', res.f, 'TO', [])
+                        else:
+                            send_msg('0', 'F', 'NF', [])
+                    else:
+                        send_msg('0', 'F', 'NF', [])
+        else:
+            send_msg('0', 'F', 'NF', [])
     else:
         send_msg('0', 'F', 'NF', [])
     queue.pop(0)
