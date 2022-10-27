@@ -87,7 +87,7 @@ def second_layout():
 
 # draw marks and define rectangle as background
 def draw_marks():
-    draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
+    draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='white')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
     x, y = utils.w2vp(50, 30, vpv)
@@ -462,21 +462,21 @@ def generate_mask(frame, hsv, color):
         if area > 600:
             # recognize rectangles 
             if len(approx) == 4 and color == 'black':
-                    cx, cy = centroid(count)
-                    cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
-                    # rectangles - marks 
-                    if num_corner == 0: 
-                        num_corner = new_corner(corner1, num_corner, cx, cy)
-                    elif num_corner == 1: 
-                        num_corner = new_corner(corner2, num_corner, cx, cy)
-                        # draws the region of interest as a rectangle
-                        cv2.rectangle(frame, (int(corner1[0]), int(corner1[1])), (int(corner2[0]), int(corner2[1])), rgb_white, 2)
-                        return corner1, corner2
-                    elif num_corner == 2:
-                        # reset values
-                        corner1 = []
-                        corner2 = []
-                        num_corner = 0
+                cx, cy = centroid(count)
+                cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
+                # rectangles - marks 
+                if num_corner == 0: 
+                    num_corner = new_corner(corner1, num_corner, cx, cy)
+                elif num_corner == 1: 
+                    num_corner = new_corner(corner2, num_corner, cx, cy)
+                    # draws the region of interest as a rectangle
+                    cv2.rectangle(frame, (int(corner1[0]), int(corner1[1])), (int(corner2[0]), int(corner2[1])), rgb_white, 2)
+                    return corner1, corner2
+                elif num_corner == 2:
+                    # reset values
+                    corner1 = []
+                    corner2 = []
+                    num_corner = 0
             elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 13):
                 cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
@@ -695,17 +695,17 @@ def read_msg():
             msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
-                flag = True
-                for a in agent.values():
-                    if msg_read[0] == str(a.id):
-                        if msg_read[2:4] == 'SS':
-                            if a.processing:
-                                a.ss = True
-                            send_msg('0', msg_read[0], 'SS', [])
-                            flag = False
-                            break
-                if flag:
-                    a.msg_queue.append(msg_read)
+                if len(msg_read) < 4:
+                    send_msg('0', 'F', 'NF', [])
+                else:
+                    for a in agent.values():
+                        if msg_read[0] == str(a.id):
+                            if msg_read[2:4] == 'SS':
+                                if a.processing:
+                                    a.ss = True
+                                send_msg('0', msg_read[0], 'SS', [])
+                            else:
+                                a.msg_queue.append(msg_read)
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -858,63 +858,60 @@ def take_obj(id_obj, ob_list, agent):
             
 def process_msg(queue, res, i):
     i.processing = True
-    if len(queue[0]) > 3:
-        com.deserialize(queue[0], res)
-        if res.d == '0':
-            for val in agent.values():
-                if val:
-                    if val.found and str(val.id) == res.f:
-                        # get position
-                        if res.c == 'GP':
-                            if len(res.p) == 0:
-                                answer(int(res.f), val, res.f, res.c)
-                            else:
-                                for a in agent.values():
-                                    if str(a.id) == res.p[0]:
-                                        answer(int(res.f), a, res.f, res.c)
-                                        break
-                            # call agent         # agent arrived      # follow me
-                        elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
-                            send_msg('0', res.p[0], res.c, [res.f])
-                        elif res.c == 'CL':
-                            send_msg('0', res.f, 'IC', [])
-                            val.collision = True
-                        elif res.c == 'FC':
+    com.deserialize(queue[0], res)
+    if res.d == '0':
+        for val in agent.values():
+            if val:
+                if val.found and str(val.id) == res.f:
+                    # get position
+                    if res.c == 'GP':
+                        if len(res.p) == 0:
+                            answer(int(res.f), val, res.f, res.c)
+                        else:
+                            for a in agent.values():
+                                if str(a.id) == res.p[0]:
+                                    answer(int(res.f), a, res.f, res.c)
+                                    break
+                        # call agent         # agent arrived      # follow me
+                    elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
+                        send_msg('0', res.p[0], res.c, [res.f])
+                    elif res.c == 'CL':
+                        send_msg('0', res.f, 'IC', [])
+                        val.collision = True
+                    elif res.c == 'FC':
+                        send_msg('0', res.f, res.c, [])
+                        val.collision = False
+                    elif res.c == 'HO':
+                        val.home = True
+                    elif res.c == 'NM':
+                        if res.p:
+                            val.name = res.p[0]
                             send_msg('0', res.f, res.c, [])
-                            val.collision = False
-                        elif res.c == 'HO':
-                            val.home = True
-                        elif res.c == 'NM':
-                            if res.p:
-                                val.name = res.p[0]
-                                send_msg('0', res.f, res.c, [])
-                            else:
-                                send_msg('0', 'F', 'NF', [])
-                        elif res.c == 'SC':
-                            send_msg('0', res.f, res.c, [])
-                            val.searching = True
-                        elif res.c == 'FS':
-                            send_msg('0', res.f, res.c, [])
-                            val.searching = False
-                        elif res.c == 'BU':
-                            send_msg('0', res.f, res.c, [])
-                            val.busy = True
-                        elif res.c == 'NB':
-                            send_msg('0', res.f, res.c, [])
-                            val.busy = False    
-                        elif res.c in ('SO', 'BO'):
-                            id_obj = int(res.p[0])
-                            if res.c == 'SO':
-                                take_obj(id_obj, small_obj, val)
-                            else:
-                                take_obj(id_obj, big_obj, val)
-                            send_msg('0', res.f, 'TO', [])
                         else:
                             send_msg('0', 'F', 'NF', [])
+                    elif res.c == 'SC':
+                        send_msg('0', res.f, res.c, [])
+                        val.searching = True
+                    elif res.c == 'FS':
+                        send_msg('0', res.f, res.c, [])
+                        val.searching = False
+                    elif res.c == 'BU':
+                        send_msg('0', res.f, res.c, [])
+                        val.busy = True
+                    elif res.c == 'NB':
+                        send_msg('0', res.f, res.c, [])
+                        val.busy = False    
+                    elif res.c in ('SO', 'BO'):
+                        id_obj = int(res.p[0])
+                        if res.c == 'SO':
+                            take_obj(id_obj, small_obj, val)
+                        else:
+                            take_obj(id_obj, big_obj, val)
+                        send_msg('0', res.f, 'TO', [])
                     else:
                         send_msg('0', 'F', 'NF', [])
-        else:
-            send_msg('0', 'F', 'NF', [])
+                else:
+                    send_msg('0', 'F', 'NF', [])
     else:
         send_msg('0', 'F', 'NF', [])
     queue.pop(0)
