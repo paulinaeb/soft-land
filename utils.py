@@ -29,16 +29,17 @@ class Agent:
         self.id = get_id(color) 
         self.draws = []
         self.found = False
-        self.home = False
         self.collision = False
         self.searching = False
         self.busy = False
         self.has_small = 0
-        self.has_big = False
+        self.has_big = 0
+        self.dl = False
         self.msg_queue = []
         self.ss = False
         self.res = None
         self.processing = False
+        self.r = 0
         self.cx = self.cy = self.direction = self.radius = self.info = self.vx = self.vy = self.name = None 
     def set_values(self, cx, cy, vx, vy, r, direction, info): 
         self.cx = cx

@@ -41,7 +41,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-        #  'green': None,
+         'green': None,
         #   'yellow': None
         }  
 
@@ -57,8 +57,7 @@ int_sec = None
 count_secs = 10
 # distance
 d_small = 10
-d_big = 20
-d_home = 25
+d_big = 15
 d_collision = 2
 
 
@@ -87,7 +86,7 @@ def second_layout():
 
 # draw marks and define rectangle as background
 def draw_marks():
-    draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='white')
+    draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
     x, y = utils.w2vp(50, 30, vpv)
@@ -235,43 +234,30 @@ def manage_masks(frame, hsv):
                 show_draws(frame, agnt, circle_color) 
                 transform_points(frame, agnt)
                 if num_agents > 0:
-                    detect_objects(agnt, d_small, small_obj, False, True, False)
-                    detect_objects(agnt, d_big, big_obj, False, False, True)
-                    detect_objects(agnt, d_home, home, True, False, False)
-                
+                    agnt.r = get_distance(agnt.cx, agnt.vx, agnt.cy, agnt.vy)
+                    detect_objects(agnt, d_small, small_obj, True, False)
+                    detect_objects(agnt, d_big, big_obj, False, True)
     else:
         for color in obj_masks:
             generate_mask(frame, hsv, color) 
     return
 
 # avoid distance for agents
-def detect_objects(this, d2detect, ob_list, is_home, is_small, is_big):
+def detect_objects(this, d2detect, ob_list, is_small, is_big):
     if len(ob_list) > 0:
-        if is_home:
-            r_ob = ob_list[2]
-        else:
-            r_ob = ob_list[0][3]
-        d2ignore = get_distance(this.cx, this.vx, this.cy, this.vy) + r_ob
+        r_ob = ob_list[0][3]
+        d2ignore = this.r + r_ob
         d_final = d2detect + d2ignore
-        if is_home:
-            d = get_distance(this.cx, ob_list[0], this.cy, ob_list[1])
-            if d <= d_final:
-                # sends position
-                if this.home == False:
-                    send_msg('0', str(this.id), 'HO', [str(ob_list[0]), str(ob_list[1]), str(round(d2ignore))])
-        else:
-            if this.searching == True and this.busy == False:
-                for ob in ob_list:
-                    d = get_distance(this.cx, ob[0], this.cy, ob[1])
-                    if d <= d_final:
-                        if is_small:
-                            print('small object detected')
-                            c = 'SO'
-                            send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
-                        if is_big and num_agents > 1:
-                            print('big object detected')
-                            c = 'BO'                            # x          # y      #id_obj    # sum of radius
-                            send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
+        if this.searching:
+            for ob in ob_list:
+                d = get_distance(this.cx, ob[0], this.cy, ob[1])
+                if d <= d_final:
+                    if is_small:
+                        c = 'SO'
+                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
+                    if is_big:
+                        c = 'BO'                            # x          # y      #id_obj    # sum of radius
+                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -311,18 +297,19 @@ def detect_agents(this):
 
 
 def col2objects(this, objs):
-    for ob in objs:
-        d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
-        if d2ob < this.radius + ob[3] + d_collision:
-            send_collision(this.id)
-            return True
+    if not this.busy:
+        for ob in objs:
+            d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
+            if d2ob < this.radius + ob[3] + d_collision:
+                send_collision(this.id)
+                return True
     return False
 
 
 def send_collision(a_id):
     if num_agents:
         for a in agent.values():
-            if a.id == a_id and not a.collision:
+            if a.id == a_id and not a.collision and not a.busy:
                 try:
                     send_msg('0', str(a_id), 'CL', [])
                 except serial.SerialException:
@@ -358,8 +345,14 @@ def show_draws(frame, agnt, color):
     agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
     if agnt.has_small:
         r2v, _ = utils.w2vp(1.5, 0, vpv)
-        for i in range(agnt.has_small):
-            agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'SeaGreen1'))
+        if not agnt.dl:
+            for i in range(agnt.has_small):
+                agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise'))
+                agnt.add_draws(draw.draw_text(text = 'X', location = (vx, vy), color = 'pale turquoise', font='Helvetica 15'))
+        else:
+            draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise')
+            agnt.dl = False
+            agnt.has_small = 0
     return
 
 
@@ -429,21 +422,15 @@ home = []
 
 def set_obj(arr, cx, cy, is_movable):
     exists = False
-    if len(arr):
+    for obj in arr:
+        if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
+            print('exists')
+            exists = True
+    if not exists:
         if is_movable:
-            # x - y - id draw - radius
             arr.append([cx, cy, 0, 0])
         else:
             arr.append([cx, cy])
-    else:
-        for obj in arr:
-            if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
-                exists = True
-        if not exists:
-            if is_movable:
-                arr.append([cx, cy, 0, 0])
-            else:
-                arr.append([cx, cy])
     return arr
 
 def generate_mask(frame, hsv, color):
@@ -657,7 +644,7 @@ def init_obj(obj_type):
             r2v, _ = utils.w2vp(r, 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                id_draw = draw.draw_circle((x, y), r2v, line_color = 'SeaGreen1')
+                id_draw = draw.draw_circle((x, y), r2v, line_color = 'pale turquoise')
                 obj[2] = id_draw
                 obj[3] = r
         if len(home) > 0:
@@ -703,9 +690,10 @@ def read_msg():
                             if msg_read[2:4] == 'SS':
                                 if a.processing:
                                     a.ss = True
-                                send_msg('0', msg_read[0], 'SS', [])
+                                # send_msg('0', msg_read[0], 'SS', [])
                             else:
                                 a.msg_queue.append(msg_read)
+                            break
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
@@ -849,6 +837,7 @@ def take_obj(id_obj, ob_list, agent):
     i = 0
     for ob in ob_list:
         if ob[2] == id_obj:
+            print('deleting obj')
             draw.delete_figure(id_obj)
             agent.has_small += 1
             ob_list.pop(i)
@@ -875,6 +864,7 @@ def process_msg(queue, res, i):
                         # call agent         # agent arrived      # follow me
                     elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
                         send_msg('0', res.p[0], res.c, [res.f])
+                        send_msg('0', res.f, 'AC', [])
                     elif res.c == 'CL':
                         send_msg('0', res.f, 'IC', [])
                         val.collision = True
@@ -882,7 +872,11 @@ def process_msg(queue, res, i):
                         send_msg('0', res.f, res.c, [])
                         val.collision = False
                     elif res.c == 'HO':
-                        val.home = True
+                        if len(home):
+                            d = home[2] + val.r
+                            send_msg('0', res.f, res.c, [str(home[0]), str(home[1]), str(round(d, 1))])
+                        else:
+                            send_msg('0', res.f, res.c, ['NF'])
                     elif res.c == 'NM':
                         if res.p:
                             val.name = res.p[0]
@@ -890,17 +884,17 @@ def process_msg(queue, res, i):
                         else:
                             send_msg('0', 'F', 'NF', [])
                     elif res.c == 'SC':
-                        send_msg('0', res.f, res.c, [])
                         val.searching = True
+                        send_msg('0', res.f, res.c, [])
                     elif res.c == 'FS':
-                        send_msg('0', res.f, res.c, [])
                         val.searching = False
+                        send_msg('0', res.f, res.c, [])
                     elif res.c == 'BU':
-                        send_msg('0', res.f, res.c, [])
                         val.busy = True
-                    elif res.c == 'NB':
                         send_msg('0', res.f, res.c, [])
-                        val.busy = False    
+                    elif res.c == 'NB':
+                        val.busy = False
+                        send_msg('0', res.f, res.c, [])
                     elif res.c in ('SO', 'BO'):
                         id_obj = int(res.p[0])
                         if res.c == 'SO':
@@ -908,6 +902,9 @@ def process_msg(queue, res, i):
                         else:
                             take_obj(id_obj, big_obj, val)
                         send_msg('0', res.f, 'TO', [])
+                    elif res.c == 'DL':
+                        val.dl = True
+                        send_msg('0', res.f, res.c, [])
                     else:
                         send_msg('0', 'F', 'NF', [])
                 else:
