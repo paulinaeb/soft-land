@@ -508,14 +508,11 @@ def generate_mask(frame, hsv, color):
                     cx, cy = center(vx_coord, vy_coord)  
                     # get min angle coordinates 
                     vx, vy = get_vertex(vx_coord[0], vy_coord[0], vx_coord[1], vy_coord[1], vx_coord[2], vy_coord[2])
-                     
                     #get angle of vertex (direction of agent)
                     direction = direction_angle(cx, cy, vx, vy)
-                    
                     # convert position (cx cy) and (vx, vy) to world coordinates         
                     cx2, cy2 = utils.vp2w(cx, cy, vpc)
                     vx2, vy2 = utils.vp2w(vx, vy, vpc) 
-                    
                     #distance between centroid and min angle vertex in world coordinates to get radius
                     r = get_distance(cx2, vx2, cy2, vy2)  + 1.2
                     # display info on frame 
@@ -813,9 +810,6 @@ def main():
                             # handles exception
                         except serial.SerialException:
                             print('There was found a problem with your serial port connection. Please verify and try again.')
-            else:
-                # clear_screen()        
-                pass
             if num_agents and not ser_com:
                 for i in agent.values():
                     i.res = com.Resp()
@@ -827,7 +821,6 @@ def main():
                     print(i.msg_queue)
                     t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
                     t.start()
-
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
@@ -837,7 +830,6 @@ def take_obj(id_obj, ob_list, agent):
     i = 0
     for ob in ob_list:
         if ob[2] == id_obj:
-            print('deleting obj')
             draw.delete_figure(id_obj)
             agent.has_small += 1
             ob_list.pop(i)
