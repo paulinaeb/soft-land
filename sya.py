@@ -61,7 +61,7 @@ d_big = 15
 d_collision = 2
 
 
-def image_to_data(im): 
+def img2data(im): 
     with BytesIO() as output:
         im.save(output, format="PNG")
         data = output.getvalue()
@@ -90,7 +90,13 @@ def draw_marks():
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
     x, y = utils.w2vp(50, 30, vpv)
-    draw.draw_circle((x, y), 1, fill_color='white')
+    draw.draw_circle((x, y), 2, fill_color='white')
+    w, z = utils.w2vp(61, 35, vpv)
+    draw.draw_circle((w, z), 2, fill_color='white') 
+    d = get_distance(x, w, y, z)
+    angle = degrees2radians(28)  
+    a, b = d * math.cos(angle) + w, d * math.sin(angle) + z
+    draw.draw_circle((a, b), 2, fill_color='white') 
     return
 
 # clear projection in second monitor
@@ -254,10 +260,10 @@ def detect_objects(this, d2detect, ob_list, is_small, is_big):
                 if d <= d_final:
                     if is_small:
                         c = 'SO'
-                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
+                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(this.radius + r_ob*1.5))])
                     if is_big:
                         c = 'BO'                            # x          # y      #id_obj    # sum of radius
-                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(d2ignore))])
+                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(this.radius + r_ob*1.5))])
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -288,7 +294,7 @@ def detect_agents(this):
         if d2ob < this.radius + ob[2] + d_collision:
             send_collision(this.id)
             return True
-    if not this.searching:
+    if not this.searching and not this.busy:
         if col2objects(this, small_obj) or col2objects(this, big_obj):
             return True
     if flag:
@@ -297,12 +303,11 @@ def detect_agents(this):
 
 
 def col2objects(this, objs):
-    if not this.busy:
-        for ob in objs:
-            d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
-            if d2ob < this.radius + ob[3] + d_collision:
-                send_collision(this.id)
-                return True
+    for ob in objs:
+        d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
+        if d2ob < this.radius + ob[3] + d_collision:
+            send_collision(this.id)
+            return True
     return False
 
 
@@ -650,7 +655,7 @@ def init_obj(obj_type):
             im = Image.open("house.png")
             im = im.resize((a, a))
             x, y = utils.w2vp(home[0], home[1], vpv)
-            draw.draw_image(data = image_to_data(im), location=(x - r2v, y + r2v))
+            draw.draw_image(data = img2data(im), location=(x - r2v, y + r2v))
     return
 
 # sets values to response object, serializes, encodes and sends message by serial
@@ -680,14 +685,13 @@ def read_msg():
             if msg_read:
                 print(msg_read)
                 if len(msg_read) < 4:
-                    send_msg('0', 'F', 'NF', [])
+                    not_found()
                 else:
                     for a in agent.values():
                         if msg_read[0] == str(a.id):
                             if msg_read[2:4] == 'SS':
                                 if a.processing:
                                     a.ss = True
-                                # send_msg('0', msg_read[0], 'SS', [])
                             else:
                                 a.msg_queue.append(msg_read)
                             break
@@ -818,7 +822,7 @@ def main():
                 t2.start()
             for i in agent.values():
                 if len(i.msg_queue) > 0 and not i.processing:
-                    print(i.msg_queue)
+                    print(str(i.id)+' '+str(i.msg_queue))
                     t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
                     t.start()
             #process and updates image from camera 
@@ -836,6 +840,10 @@ def take_obj(id_obj, ob_list, agent):
             break
         i += 1
             
+
+def not_found():
+    send_msg('0', 'F', 'NF', [])
+
             
 def process_msg(queue, res, i):
     i.processing = True
@@ -855,8 +863,11 @@ def process_msg(queue, res, i):
                                     break
                         # call agent         # agent arrived      # follow me
                     elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
-                        send_msg('0', res.p[0], res.c, [res.f])
                         send_msg('0', res.f, 'AC', [])
+                        if res.c == 'AR':
+                            send_msg('0', res.p[0], res.c, [res.f])
+                        elif res.c == 'CA':
+                            send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2]])
                     elif res.c == 'CL':
                         send_msg('0', res.f, 'IC', [])
                         val.collision = True
@@ -874,7 +885,7 @@ def process_msg(queue, res, i):
                             val.name = res.p[0]
                             send_msg('0', res.f, res.c, [])
                         else:
-                            send_msg('0', 'F', 'NF', [])
+                            not_found()
                     elif res.c == 'SC':
                         val.searching = True
                         send_msg('0', res.f, res.c, [])
@@ -898,11 +909,10 @@ def process_msg(queue, res, i):
                         val.dl = True
                         send_msg('0', res.f, res.c, [])
                     else:
-                        send_msg('0', 'F', 'NF', [])
-                else:
-                    send_msg('0', 'F', 'NF', [])
+                        not_found()
+                    break
     else:
-        send_msg('0', 'F', 'NF', [])
+        not_found()
     queue.pop(0)
     i.processing = False
     return
