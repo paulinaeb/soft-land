@@ -41,7 +41,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-         'green': None,
+        #  'green': None,
         #   'yellow': None
         }  
 
@@ -89,14 +89,14 @@ def draw_marks():
     draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
-    x, y = utils.w2vp(50, 30, vpv)
-    draw.draw_circle((x, y), 2, fill_color='white')
-    w, z = utils.w2vp(61, 35, vpv)
-    draw.draw_circle((w, z), 2, fill_color='white') 
-    d = get_distance(x, w, y, z)
-    angle = degrees2radians(28)  
-    a, b = d * math.cos(angle) + w, d * math.sin(angle) + z
-    draw.draw_circle((a, b), 2, fill_color='white') 
+    # x, y = utils.w2vp(50, 30, vpv)
+    # draw.draw_circle((x, y), 2, fill_color='white')
+    # w, z = utils.w2vp(61, 35, vpv)
+    # draw.draw_circle((w, z), 2, fill_color='white') 
+    # d = get_distance(x, w, y, z)
+    # angle = degrees2radians(28)  
+    # a, b = d * math.cos(angle) + w, d * math.sin(angle) + z
+    # draw.draw_circle((a, b), 2, fill_color='white') 
     return
 
 # clear projection in second monitor
@@ -112,12 +112,7 @@ def centroid(count):
     cy = round(M['m01'] / M['m00'], 2)  
     return cx, cy
 
-# centroid of triangle
-def center(vx, vy):
-    cx = round((vx[0] + vx[1] + vx[2]) / 3, 2)
-    cy = round((vy[0] + vy[1] + vy[2]) / 3, 2)
-    return cx, cy
-    
+
 # function to define region of interest
 def new_corner(corner, num, x, y):
     corner.append(x)
@@ -286,7 +281,7 @@ def detect_agents(this):
                             send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
                             send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
     limit_col = 2.5
-    if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius -1 or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
+    if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
         send_collision(this.id)
         return True
     for ob in obstacles:
@@ -294,31 +289,16 @@ def detect_agents(this):
         if d2ob < this.radius + ob[2] + d_collision:
             send_collision(this.id)
             return True
-    if not this.searching and not this.busy:
-        if col2objects(this, small_obj) or col2objects(this, big_obj):
-            return True
     if flag:
         return True
     return False     
 
 
-def col2objects(this, objs):
-    for ob in objs:
-        d2ob = get_distance(this.cx, ob[0], this.cy, ob[1])
-        if d2ob < this.radius + ob[3] + d_collision:
-            send_collision(this.id)
-            return True
-    return False
-
-
 def send_collision(a_id):
     if num_agents:
         for a in agent.values():
-            if a.id == a_id and not a.collision and not a.busy:
-                try:
-                    send_msg('0', str(a_id), 'CL', [])
-                except serial.SerialException:
-                    pass
+            if a.id == a_id and not a.collision:
+                send_msg('0', str(a_id), 'CL', [])
                 break
     return     
         
@@ -452,9 +432,9 @@ def generate_mask(frame, hsv, color):
         # get area to work with only visible objects
         area = cv2.contourArea(count)
         if area > 600:
+            cx, cy = centroid(count)
             # recognize rectangles 
             if len(approx) == 4 and color == 'black':
-                cx, cy = centroid(count)
                 cv2.circle(frame, (int(cx),int(cy)), 2, rgb_white, 2)
                 # rectangles - marks 
                 if num_corner == 0: 
@@ -470,7 +450,6 @@ def generate_mask(frame, hsv, color):
                     corner2 = []
                     num_corner = 0
             elif (color in ('blue', 'yellow')) and init_objs == True and (len(approx) == 4 or len(approx) > 13):
-                cx, cy = centroid(count)
                 cx, cy = utils.vp2w(cx, cy, vpc)
                 cx, cy =(math.floor(cx), math.floor(cy))
                 cv2.drawContours(frame, [approx], 0, (0), 2)
@@ -509,8 +488,6 @@ def generate_mask(frame, hsv, color):
                     i = i + 1
                 if flag == 3 :  
                     cv2.drawContours(frame, [approx], 0, (0), 2)
-                    # computes the centroid of triangle   
-                    cx, cy = center(vx_coord, vy_coord)  
                     # get min angle coordinates 
                     vx, vy = get_vertex(vx_coord[0], vy_coord[0], vx_coord[1], vy_coord[1], vx_coord[2], vy_coord[2])
                     #get angle of vertex (direction of agent)
@@ -690,26 +667,27 @@ def read_msg():
                     for a in agent.values():
                         if msg_read[0] == str(a.id):
                             if msg_read[2:4] == 'SS':
-                                if a.processing:
-                                    a.ss = True
+                                if len(msg_read) == 4:
+                                    if a.processing:
+                                        a.ss = True
                             else:
                                 a.msg_queue.append(msg_read)
                             break
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
+        for i in agent.values():
+            if len(i.msg_queue) and not i.processing:
+                print(str(i.id)+' '+str(i.msg_queue))
+                t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
+                t.start()
         if event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
     return
 
 
 def answer(f_id, val, d, c):
-    global stop
     i = 0
     while True:
-        if val.ss:
-            print('stopped')
-            val.ss = False
-            break
         if i % 10000 == 0:
             print(i/10000)
         if val.cx and c == 'GP':
@@ -718,6 +696,10 @@ def answer(f_id, val, d, c):
             else:
                 x = str(round(val.cx))
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
+            break
+        elif val.ss:
+            print('stopped')
+            val.ss = False
             break
         elif event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
@@ -820,11 +802,6 @@ def main():
                 ser_com = True
                 t2 = threading.Thread(target=read_msg)
                 t2.start()
-            for i in agent.values():
-                if len(i.msg_queue) > 0 and not i.processing:
-                    print(str(i.id)+' '+str(i.msg_queue))
-                    t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
-                    t.start()
             #process and updates image from camera 
             imgbytes = cv2.imencode('.png', frame)[1].tobytes() 
             window['image'].update(data=imgbytes)
@@ -851,29 +828,44 @@ def process_msg(queue, res, i):
     if res.d == '0':
         for val in agent.values():
             if val:
-                if val.found and str(val.id) == res.f:
+                if str(val.id) == res.f:
                     # get position
                     if res.c == 'GP':
-                        if len(res.p) == 0:
+                        if len(queue[0]) == 4:
                             answer(int(res.f), val, res.f, res.c)
                         else:
-                            for a in agent.values():
-                                if str(a.id) == res.p[0]:
-                                    answer(int(res.f), a, res.f, res.c)
-                                    break
-                        # call agent         # agent arrived      # follow me
-                    elif res.c == 'CA' or res.c == 'AR' or res.c == 'FM':
+                            not_found()
+                        # else:
+                        #     for a in agent.values():
+                        #         if str(a.id) == res.p[0]:
+                        #             answer(int(res.f), a, res.f, res.c)
+                        #             break
+                    elif res.c in ('CA', 'AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL', 'SO', 'BO'):
                         send_msg('0', res.f, 'AC', [])
                         if res.c == 'AR':
                             send_msg('0', res.p[0], res.c, [res.f])
                         elif res.c == 'CA':
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2]])
-                    elif res.c == 'CL':
-                        send_msg('0', res.f, 'IC', [])
-                        val.collision = True
-                    elif res.c == 'FC':
-                        send_msg('0', res.f, res.c, [])
-                        val.collision = False
+                        elif res.c == 'CL':  
+                            val.collision = True
+                        elif res.c == 'FC':
+                            val.collision = False
+                        elif res.c == 'SC':
+                            val.searching = True
+                        elif res.c == 'FS':
+                            val.searching = False
+                        elif res.c == 'BU':
+                            val.busy = True
+                        elif res.c == 'NB':
+                            val.busy = False
+                        elif res.c == 'DL':
+                            val.dl = True
+                        elif res.c in ('SO', 'BO'):
+                            id_obj = int(res.p[0])
+                            if res.c == 'SO':
+                                take_obj(id_obj, small_obj, val)
+                            else:
+                                take_obj(id_obj, big_obj, val)
                     elif res.c == 'HO':
                         if len(home):
                             d = home[2] + val.r
@@ -886,28 +878,6 @@ def process_msg(queue, res, i):
                             send_msg('0', res.f, res.c, [])
                         else:
                             not_found()
-                    elif res.c == 'SC':
-                        val.searching = True
-                        send_msg('0', res.f, res.c, [])
-                    elif res.c == 'FS':
-                        val.searching = False
-                        send_msg('0', res.f, res.c, [])
-                    elif res.c == 'BU':
-                        val.busy = True
-                        send_msg('0', res.f, res.c, [])
-                    elif res.c == 'NB':
-                        val.busy = False
-                        send_msg('0', res.f, res.c, [])
-                    elif res.c in ('SO', 'BO'):
-                        id_obj = int(res.p[0])
-                        if res.c == 'SO':
-                            take_obj(id_obj, small_obj, val)
-                        else:
-                            take_obj(id_obj, big_obj, val)
-                        send_msg('0', res.f, 'TO', [])
-                    elif res.c == 'DL':
-                        val.dl = True
-                        send_msg('0', res.f, res.c, [])
                     else:
                         not_found()
                     break
