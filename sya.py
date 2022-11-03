@@ -833,6 +833,10 @@ def take_obj(id_obj, ob_list, agent, c):
                     print('deleting big')
                     draw.delete_figure(id_obj)
                     ob_list.pop(i)
+                    for a in agent.values():
+                        if a:
+                            if agent.has_big:
+                                send_msg('0', str(a.id), 'TO', [])
             break
         i += 1
             
