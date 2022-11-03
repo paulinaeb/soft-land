@@ -697,21 +697,31 @@ def read_msg():
 
 def answer(f_id, val, d, c):
     i = 0
+    f = False
     while True:
         if i % 10000 == 0:
             print(i/10000)
-        if val.cx and c == 'GP':
+        if val.cx:
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
             else:
                 x = str(round(val.cx))
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
-        elif val.ss:
-            print('stopped')
-            val.ss = False
-            break
-        elif event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if c == 'GP':
+            if val.ss:
+                print('stopped')
+                val.ss = False
+                break
+        else:
+            for a in agent.values():
+                if a:
+                    if a.id == f_id and a.ss:
+                        f = True
+                        print('stopped 2')
+                        a.ss = False
+                        break
+        if f or event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
         i += 1
     return
@@ -858,11 +868,14 @@ def process_msg(queue, res, i):
                             answer(int(res.f), val, res.f, res.c)
                         else:
                             not_found()
-                        # else:
-                        #     for a in agent.values():
-                        #         if str(a.id) == res.p[0]:
-                        #             answer(int(res.f), a, res.f, res.c)
-                        #             break
+                    elif res.c == 'GA':
+                        if len(queue[0]) == 5:
+                            for a in agent.values():
+                                if str(a.id) == res.p[0]:
+                                    answer(int(res.f), a, res.f, res.c)
+                                    break
+                        else:
+                            not_found()
                     elif res.c == 'CA':
                         if len(res.p) == 4:
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
