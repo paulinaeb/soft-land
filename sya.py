@@ -617,6 +617,9 @@ def init_obj(obj_type):
                 id_draw = draw.draw_circle((x, y), r2v, line_color='light pink') 
                 obj[2] = id_draw
                 obj[3] = r
+                # agents taking
+                obj.append(0)
+            print(big_obj)
         if len(small_obj) > 0:
             r = 1.5
             r2v, _ = utils.w2vp(r, 0, vpv)
@@ -806,13 +809,20 @@ def main():
             window['image'].update(data=imgbytes)
 
 
-def take_obj(id_obj, ob_list, agent):
+def take_obj(id_obj, ob_list, agent, c):
     i = 0
     for ob in ob_list:
         if ob[2] == id_obj:
-            draw.delete_figure(id_obj)
-            agent.has_small += 1
-            ob_list.pop(i)
+            if c == 'SO':
+                draw.delete_figure(id_obj)
+                agent.has_small += 1
+                ob_list.pop(i)
+            else:
+                agent.has_big += 1
+                ob[4] += 1
+                if ob[4] == 2:
+                    draw.delete_figure(id_obj)
+                    ob_list.pop(i)
             break
         i += 1
             
@@ -840,8 +850,11 @@ def process_msg(queue, res, i):
                         #             answer(int(res.f), a, res.f, res.c)
                         #             break
                     elif res.c == 'CA':
-                        send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2]])
-                    elif res.c in ('AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL', 'SO', 'BO'):
+                        if len(res.p) == 4:
+                            send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
+                        else:
+                            not_found()
+                    elif res.c in ('AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL'):
                         send_msg('0', res.f, 'AC', [])
                         if res.c == 'AR':
                             send_msg('0', res.p[0], res.c, [res.f])
@@ -859,12 +872,16 @@ def process_msg(queue, res, i):
                             val.busy = False
                         elif res.c == 'DL':
                             val.dl = True
-                        elif res.c in ('SO', 'BO'):
+                    elif res.c in ('SO', 'BO'):
+                        if len(res.p):
+                            send_msg('0', res.f, 'AC', [])
                             id_obj = int(res.p[0])
                             if res.c == 'SO':
-                                take_obj(id_obj, small_obj, val)
+                                take_obj(id_obj, small_obj, val, res.c)
                             else:
-                                take_obj(id_obj, big_obj, val)
+                                take_obj(id_obj, big_obj, val, res.c)
+                        else:
+                            not_found()
                     elif res.c == 'HO':
                         if len(home):
                             d = home[2] + val.r
