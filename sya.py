@@ -41,7 +41,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-        #  'green': None,
+         'green': None,
         #   'yellow': None
         }  
 
@@ -409,7 +409,6 @@ def set_obj(arr, cx, cy, is_movable):
     exists = False
     for obj in arr:
         if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
-            print('exists')
             exists = True
     if not exists:
         if is_movable:
@@ -840,12 +839,12 @@ def process_msg(queue, res, i):
                         #         if str(a.id) == res.p[0]:
                         #             answer(int(res.f), a, res.f, res.c)
                         #             break
-                    elif res.c in ('CA', 'AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL', 'SO', 'BO'):
+                    elif res.c == 'CA':
+                        send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2]])
+                    elif res.c in ('AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL', 'SO', 'BO'):
                         send_msg('0', res.f, 'AC', [])
                         if res.c == 'AR':
                             send_msg('0', res.p[0], res.c, [res.f])
-                        elif res.c == 'CA':
-                            send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2]])
                         elif res.c == 'CL':  
                             val.collision = True
                         elif res.c == 'FC':
