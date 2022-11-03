@@ -280,6 +280,14 @@ def detect_agents(this):
                         if num_agents:                      # dir   # dis
                             send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
                             send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
+                    # for drawing big obj
+                    if this.has_big and a.has_big:
+                        ax, ay = utils.w2vp(a.cx, a.cy, vpv)
+                        bx, by = utils.w2vp(this.cx, this.cy, vpv)
+                        px, py = (ax + bx) / 2, (ay + by) / 2
+                        this.add_draws(draw.draw_text(text = 'X', location = (px, py), color = 'gray', font='Helvetica 15'))
+                        r, _ = utils.w2vp(3, 0, vpv)
+                        this.add_draws(draw.draw_circle((px, py), r, line_color='light pink') )
     limit_col = 2.5
     if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
         send_collision(this.id)
@@ -769,7 +777,7 @@ def main():
                     cv2.putText(frame, (str(int(vpc_min[0]))+','+str(int(vpc_min[1]))), (int(vpc.u_min) - 10, int(vpc.v_min) + 15), 3, 0.5, rgb_white)
                     cv2.putText(frame, (str(int(vpc_max[0]))+','+str(int(vpc_max[1]))), (int(vpc.u_max) - 70, int(vpc.v_max) - 5), 3, 0.5, rgb_white)
                     # call to function to detect agents
-                    manage_masks(frame, hsv)
+                    manage_masks(frame, hsv)         
                     # transform_center2get_angle(frame, 'blue', 'green')
                     global vpv_mid_x
                     global vpv_mid_y
@@ -820,7 +828,9 @@ def take_obj(id_obj, ob_list, agent, c):
             else:
                 agent.has_big += 1
                 ob[4] += 1
+                print('has big')
                 if ob[4] == 2:
+                    print('deleting big')
                     draw.delete_figure(id_obj)
                     ob_list.pop(i)
             break
