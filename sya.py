@@ -672,17 +672,21 @@ def read_msg():
             if msg_read:
                 print(msg_read)
                 if len(msg_read) < 4:
-                    not_found()
+                    not_found('F')
                 else:
                     for a in agent.values():
                         if msg_read[0] == str(a.id):
-                            if msg_read[2:4] == 'SS':
-                                if len(msg_read) == 4:
-                                    if a.processing:
-                                        a.ss = True
-                            else:
+                            # if msg_read[2:4] == 'SS':
+                            #     if len(msg_read) == 4:
+                            #         print(str(a.id)+'SS in len')
+                            #         if a.processing:
+                            #             a.ss = True
+                            #             print('ass'+str(a.id))
+                            #         else:
+                            #             break
+                            # else:
                                 a.msg_queue.append(msg_read)
-                            break
+                                break
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         for i in agent.values():
@@ -697,10 +701,9 @@ def read_msg():
 
 def answer(f_id, val, d, c):
     i = 0
-    f = False
     while True:
-        if i % 10000 == 0:
-            print(i/10000)
+        f = i % 10000
+        print('sending '+str(f))
         if val.cx:
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
@@ -708,20 +711,25 @@ def answer(f_id, val, d, c):
                 x = str(round(val.cx))
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
-        if c == 'GP':
-            if val.ss:
-                print('stopped')
-                val.ss = False
-                break
-        else:
-            for a in agent.values():
-                if a:
-                    if a.id == f_id and a.ss:
-                        f = True
-                        print('stopped 2')
-                        a.ss = False
-                        break
-        if f or event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if f == 200:
+            not_found(f_id)
+            print('timeout')
+            break
+        # if c == 'GP':
+        #     if val.ss:
+        #         print('stopped')
+        #         val.ss = False
+        #         break
+        
+        # else:
+        #     for a in agent.values():
+        #         if a:
+        #             if a.id == f_id and a.ss:
+        #                 f = True
+        #                 print('stopped 2')
+        #                 a.ss = False
+        #                 break
+        if event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
         i += 1
     return
@@ -851,8 +859,8 @@ def take_obj(id_obj, ob_list, val, c):
         i += 1
             
 
-def not_found():
-    send_msg('0', 'F', 'NF', [])
+def not_found(d):
+    send_msg('0', d, 'NF', [])
 
             
 def process_msg(queue, res, i):
@@ -865,42 +873,49 @@ def process_msg(queue, res, i):
                     # get position
                     if res.c == 'GP':
                         if len(queue[0]) == 4:
-                            answer(int(res.f), val, res.f, res.c)
+                            answer(res.f, val, res.f, res.c)
                         else:
-                            not_found()
+                            not_found('F')
                     elif res.c == 'GA':
-                        if len(queue[0]) == 5:
+                        if len(res.p) == 1:
                             for a in agent.values():
                                 if str(a.id) == res.p[0]:
-                                    answer(int(res.f), a, res.f, res.c)
+                                    answer(res.f, a, res.f, res.c)
                                     break
                         else:
-                            not_found()
+                            not_found('F')
                     elif res.c == 'CA':
                         if len(res.p) == 4:
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
                         else:
-                            not_found()
-                    elif res.c in ('AR', 'FM', 'CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL'):
-                        send_msg('0', res.f, 'AC', [])
-                        if res.c == 'AR':
+                            not_found('F')
+                    elif res.c in ('AR', 'FM'):
+                        if len(res.p) == 1:
+                            send_msg('0', res.f, 'AC', [])
                             send_msg('0', res.p[0], res.c, [res.f])
-                        elif res.c == 'CL':  
-                            val.collision = True
-                        elif res.c == 'FC':
-                            val.collision = False
-                        elif res.c == 'SC':
-                            val.searching = True
-                        elif res.c == 'FS':
-                            val.searching = False
-                        elif res.c == 'BU':
-                            val.busy = True
-                        elif res.c == 'NB':
-                            val.busy = False
-                        elif res.c == 'DL':
-                            val.dl = True
+                        else:
+                            not_found('F')
+                    elif res.c in ('CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL'):
+                        if not len(res.p):
+                            send_msg('0', res.f, 'AC', [])
+                            if res.c == 'CL':  
+                                val.collision = True
+                            elif res.c == 'FC':
+                                val.collision = False
+                            elif res.c == 'SC':
+                                val.searching = True
+                            elif res.c == 'FS':
+                                val.searching = False
+                            elif res.c == 'BU':
+                                val.busy = True
+                            elif res.c == 'NB':
+                                val.busy = False
+                            elif res.c == 'DL':
+                                val.dl = True
+                        else:
+                            not_found('F')
                     elif res.c in ('SO', 'BO'):
-                        if len(res.p):
+                        if len(res.p) == 1:
                             send_msg('0', res.f, 'AC', [])
                             id_obj = int(res.p[0])
                             if res.c == 'SO':
@@ -908,24 +923,27 @@ def process_msg(queue, res, i):
                             else:
                                 take_obj(id_obj, big_obj, val, res.c)
                         else:
-                            not_found()
+                            not_found('F')
                     elif res.c == 'HO':
-                        if len(home):
-                            d = home[2] + val.r
-                            send_msg('0', res.f, res.c, [str(home[0]), str(home[1]), str(round(d, 1))])
+                        if len(res.p) == 0:
+                            if len(home):
+                                d = home[2] + val.r
+                                send_msg('0', res.f, res.c, [str(home[0]), str(home[1]), str(round(d, 1))])
+                            else:
+                                send_msg('0', res.f, res.c, [])
                         else:
-                            send_msg('0', res.f, res.c, [])
+                            not_found('F')
                     elif res.c == 'NM':
-                        if res.p:
+                        if len(res.p) == 1:
                             val.name = res.p[0]
                             send_msg('0', res.f, res.c, [])
                         else:
-                            not_found()
+                            not_found('F')
                     else:
-                        not_found()
+                        not_found('F')
                     break
     else:
-        not_found()
+        not_found('F')
     queue.pop(0)
     i.processing = False
     return
