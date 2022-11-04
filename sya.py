@@ -827,16 +827,16 @@ def main():
             window['image'].update(data=imgbytes)
 
 
-def take_obj(id_obj, ob_list, agent, c):
+def take_obj(id_obj, ob_list, val, c):
     i = 0
     for ob in ob_list:
         if ob[2] == id_obj:
             if c == 'SO':
                 draw.delete_figure(id_obj)
-                agent.has_small += 1
+                val.has_small += 1
                 ob_list.pop(i)
             else:
-                agent.has_big += 1
+                val.has_big += 1
                 ob[4] += 1
                 print('has big')
                 if ob[4] == 2:
@@ -845,7 +845,7 @@ def take_obj(id_obj, ob_list, agent, c):
                     ob_list.pop(i)
                     for a in agent.values():
                         if a:
-                            if agent.has_big:
+                            if a.has_big:
                                 send_msg('0', str(a.id), 'TO', [])
             break
         i += 1
@@ -914,7 +914,7 @@ def process_msg(queue, res, i):
                             d = home[2] + val.r
                             send_msg('0', res.f, res.c, [str(home[0]), str(home[1]), str(round(d, 1))])
                         else:
-                            send_msg('0', res.f, res.c, ['NF'])
+                            send_msg('0', res.f, res.c, [])
                     elif res.c == 'NM':
                         if res.p:
                             val.name = res.p[0]
