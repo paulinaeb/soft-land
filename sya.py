@@ -41,8 +41,11 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-         'green': None,
-        #   'yellow': None
+        # 'green': None,
+        #   'yellow': None, 
+        #  'orange': None,
+          'red': None,
+        #  'red2': None
         }  
 
 obj_masks = ['blue', 'yellow']
@@ -671,22 +674,22 @@ def read_msg():
             msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
-                if len(msg_read) < 4:
-                    not_found('F')
-                else:
-                    for a in agent.values():
-                        if msg_read[0] == str(a.id):
-                            # if msg_read[2:4] == 'SS':
-                            #     if len(msg_read) == 4:
-                            #         print(str(a.id)+'SS in len')
-                            #         if a.processing:
-                            #             a.ss = True
-                            #             print('ass'+str(a.id))
-                            #         else:
-                            #             break
-                            # else:
-                                a.msg_queue.append(msg_read)
-                                break
+                m_r = msg_read.split(',')
+                for i in range(len(m_r)-1):
+                    if len(m_r[i]) < 4:
+                        not_found('F')
+                    else:
+                        for a in agent.values():
+                            if m_r[i][0] == str(a.id):
+                                if m_r[i][2:4] == 'SS':
+                                    if len(m_r[i]) == 4:
+                                        if a.processing:
+                                            a.ss = True
+                                        else:
+                                            break
+                                else:
+                                    a.msg_queue.append(m_r[i])
+                                    break
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
         for i in agent.values():
@@ -701,9 +704,10 @@ def read_msg():
 
 def answer(f_id, val, d, c):
     i = 0
+    flag=False
     while True:
-        f = i % 10000
-        print('sending '+str(f))
+        if i % 10000==0:
+            print('sending ',str(i))
         if val.cx:
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
@@ -711,25 +715,20 @@ def answer(f_id, val, d, c):
                 x = str(round(val.cx))
             send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
             break
-        if f == 200:
-            not_found(f_id)
-            print('timeout')
-            break
-        # if c == 'GP':
-        #     if val.ss:
-        #         print('stopped')
-        #         val.ss = False
-        #         break
-        
-        # else:
-        #     for a in agent.values():
-        #         if a:
-        #             if a.id == f_id and a.ss:
-        #                 f = True
-        #                 print('stopped 2')
-        #                 a.ss = False
-        #                 break
-        if event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if c == 'GP':
+            if val.ss:
+                print('stopped')
+                val.ss = False
+                break
+        else:
+            for a in agent.values():
+                if a:
+                    if a.id == f_id and a.ss:
+                        flag = True
+                        print('stopped 2')
+                        a.ss = False
+                        break
+        if flag or event == 'Finalizar' or event == sg.WIN_CLOSED:
             break
         i += 1
     return

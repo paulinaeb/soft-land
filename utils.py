@@ -4,7 +4,7 @@ import data
 
 # colors of agent triangles
 agent = {'blue': None,
-         'green': None,
+         'red': None,
          'yellow': None}  
 
 #classes definition
