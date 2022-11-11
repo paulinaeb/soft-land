@@ -88,14 +88,6 @@ def draw_marks():
     draw.draw_rectangle((5, 5), ((vpv.u_max, vpv.v_max)), fill_color='black', line_color='gray')
     draw.draw_circle((5, 5), 5, fill_color='yellow') 
     draw.draw_circle((vpv.u_max, vpv.v_max), 5, fill_color='yellow')
-    # x, y = utils.w2vp(50, 30, vpv)
-    # draw.draw_circle((x, y), 2, fill_color='white')
-    # w, z = utils.w2vp(61, 35, vpv)
-    # draw.draw_circle((w, z), 2, fill_color='white') 
-    # d = get_distance(x, w, y, z)
-    # angle = degrees2radians(28)  
-    # a, b = d * math.cos(angle) + w, d * math.sin(angle) + z
-    # draw.draw_circle((a, b), 2, fill_color='white') 
     return
 
 # clear projection in second monitor
