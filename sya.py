@@ -834,9 +834,7 @@ def take_obj(id_obj, ob_list, val, c):
             else:
                 val.has_big += 1
                 ob[4] += 1
-                print('has big')
                 if ob[4] == 2:
-                    print('deleting big')
                     draw.delete_figure(id_obj)
                     ob_list.pop(i)
                     for a in agent.values():
@@ -924,7 +922,7 @@ def process_msg(queue, res, i):
                     elif res.c == 'NM':
                         if len(res.p) == 1:
                             val.name = res.p[0]
-                            send_msg('0', res.f, res.c, [])
+                            send_msg('0', res.f, 'AC', [])
                         else:
                             not_found('F')
                     else:
