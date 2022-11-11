@@ -317,7 +317,7 @@ def show_draws(frame, agnt, color):
         cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.28)), (0, 0, 255), 2)
        
     agnt.add_draws(draw.draw_circle((cxv, cyv), rv, line_color=color)) 
-    agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 15'))
+    agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 10'))
     
     vx, vy = utils.w2vp(agnt.vx, agnt.vy, vpv)
     if vy > cyv:
@@ -326,7 +326,7 @@ def show_draws(frame, agnt, color):
         vx, vy = utils.w2vp(agnt.vx - 5, agnt.vy - 5, vpv)
     if agnt.name: 
         agnt.info = str(agnt.name) +'\n'+ agnt.info
-    agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 15')) 
+    agnt.add_draws(draw.draw_text(text = agnt.info, location = (vx, vy), color = 'gray', font='Helvetica 12')) 
     if agnt.has_small:
         r2v, _ = utils.w2vp(1.5, 0, vpv)
         if not agnt.dl:
@@ -546,7 +546,7 @@ def init_obj(obj_type):
         while current_time < count and found == False:
             i+=1
             # validates main gui
-            if event == 'Finalizar' or event == sg.WIN_CLOSED: 
+            if event in ('Finalizar', sg.WIN_CLOSED): 
                 return
             current_time = time_as_int() - start_time  
             aux_str = str_time
@@ -685,7 +685,7 @@ def read_msg():
                 print(str(i.id)+' '+str(i.msg_queue))
                 t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
                 t.start()
-        if event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if event in ('Finalizar', sg.WIN_CLOSED):
             break
     return
 
@@ -717,7 +717,7 @@ def answer(f_id, val, d, c):
                         print('stopped 2')
                         a.ss = False
                         break
-        if flag or event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if flag or event in ('Finalizar', sg.WIN_CLOSED):
             break
         i += 1
     return
@@ -747,7 +747,7 @@ def main():
     while True:
         global event
         event, _ = window.read(timeout=20) 
-        if event == 'Finalizar' or event == sg.WIN_CLOSED:
+        if event in ('Finalizar', sg.WIN_CLOSED):
             if recording:
                 cap.release()
             return
