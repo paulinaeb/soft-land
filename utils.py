@@ -5,7 +5,7 @@ import data
 # colors of agent triangles
 agent = {'blue': None,
          'red': None,
-         'yellow': None}  
+         'green': None}  
 
 #classes definition
 class ViewPort:

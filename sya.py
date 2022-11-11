@@ -42,10 +42,7 @@ rgb_white = (255, 255, 255)
 # colors of agent triangles
 agent = { 'blue': None,
         # 'green': None,
-        #   'yellow': None, 
-        #  'orange': None,
           'red': None,
-        #  'red2': None
         }  
 
 obj_masks = ['blue', 'yellow']
@@ -706,8 +703,9 @@ def answer(f_id, val, d, c):
     i = 0
     flag=False
     while True:
-        if i % 10000==0:
-            print('sending ',str(i))
+        f = i % 10000
+        if f == 0:
+            print(i/10000)
         if val.cx:
             if val.cx <= 99.44:
                 x = str(round(val.cx, 1))
@@ -814,7 +812,7 @@ def main():
                         # set global values used multiple times to print in projection gui
                         try:
                             # tries serial connection before start initialization
-                            ser_port = serial.Serial(port='COM3', baudrate=115200, timeout=0.01)  
+                            ser_port = serial.Serial(port='COM4', baudrate=115200, timeout=0.01)  
                             window['_agents_'].Update(visible = False)
                             window['_obj_'].Update(visible = False)
                             # start of thread that init timer
