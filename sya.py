@@ -41,8 +41,7 @@ rgb_white = (255, 255, 255)
 
 # colors of agent triangles
 agent = { 'blue': None,
-        # 'green': None,
-          'red': None,
+          'red': None
         }  
 
 obj_masks = ['blue', 'yellow']
