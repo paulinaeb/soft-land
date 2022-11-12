@@ -269,8 +269,9 @@ def detect_agents(this):
                     if d < r_sum: 
                         flag += 1   
                         if num_agents:                      # dir   # dis
-                            send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
-                            send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
+                            # send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
+                            # send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
+                            pass
                     # for drawing big obj
                     if this.has_big and a.has_big:
                         ax, ay = utils.w2vp(a.cx, a.cy, vpv)
@@ -638,20 +639,13 @@ def init_obj(obj_type):
 
 # sets values to response object, serializes, encodes and sends message by serial
 def send_msg(f, d, c, p):
-    th = threading.Thread(target = th_send, args=(f, d, c, p,))
-    th.start()
-    return
-
-
-def th_send(f, d, c, p):
     obj_resp = com.Resp()
     obj_resp.set_values(f, d, c, p)
     ser_msg = com.serialize(obj_resp)
     try:
         ser_port.write((ser_msg+',').encode())
     except serial.SerialException:
-        th_send(f, d, c, p)
-        return
+        pass
     print('Sent:', ser_msg)
     return
 
@@ -662,64 +656,29 @@ def read_msg():
             msg_read = ser_port.readline().decode()
             if msg_read:
                 print(msg_read)
-                m_r = msg_read.split(',')
-                for i in range(len(m_r)-1):
-                    if len(m_r[i]) < 4:
-                        not_found('F')
-                    else:
-                        for a in agent.values():
-                            if m_r[i][0] == str(a.id):
-                                if m_r[i][2:4] == 'SS':
-                                    if len(m_r[i]) == 4:
-                                        if a.processing:
-                                            a.ss = True
-                                        else:
-                                            break
-                                else:
+                if (msg_read.count(',')):
+                    m_r = msg_read.split(',')
+                    for i in range(len(m_r)-1):
+                        if len(m_r[i]) < 4:
+                            not_found('F')
+                        else:
+                            for a in agent.values():
+                                if m_r[i][0] == str(a.id):
                                     a.msg_queue.append(m_r[i])
                                     break
+                else:
+                    not_found('F')
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
+            
         for i in agent.values():
-            if len(i.msg_queue) and not i.processing:
+            if len(i.msg_queue) and not processing:
                 print(str(i.id)+' '+str(i.msg_queue))
                 t = threading.Thread(target=process_msg, args=(i.msg_queue, i.res, i,))
                 t.start()
+                
         if event in ('Finalizar', sg.WIN_CLOSED):
             break
-    return
-
-
-def answer(f_id, val, d, c):
-    i = 0
-    flag=False
-    while True:
-        f = i % 10000
-        if f == 0:
-            print(i/10000)
-        if val.cx:
-            if val.cx <= 99.44:
-                x = str(round(val.cx, 1))
-            else:
-                x = str(round(val.cx))
-            send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
-            break
-        if c == 'GP':
-            if val.ss:
-                print('stopped')
-                val.ss = False
-                break
-        else:
-            for a in agent.values():
-                if a:
-                    if a.id == f_id and a.ss:
-                        flag = True
-                        print('stopped 2')
-                        a.ss = False
-                        break
-        if flag or event in ('Finalizar', sg.WIN_CLOSED):
-            break
-        i += 1
     return
 
 init_objs = False
@@ -848,9 +807,25 @@ def take_obj(id_obj, ob_list, val, c):
 def not_found(d):
     send_msg('0', d, 'NF', [])
 
+
+def answer(val, d, c):
+    if val.cx:
+        if val.cx <= 99.44:
+            x = str(round(val.cx, 1))
+        else:
+            x = str(round(val.cx))
+        send_msg('0', d, c, [x, str(round(val.cy, 1)), str(round(val.direction))])
+    else:
+        not_found(d)
+    return
+
+
+processing = False
+
             
 def process_msg(queue, res, i):
-    i.processing = True
+    global processing
+    processing = True
     com.deserialize(queue[0], res)
     if res.d == '0':
         for val in agent.values():
@@ -859,14 +834,14 @@ def process_msg(queue, res, i):
                     # get position
                     if res.c == 'GP':
                         if len(queue[0]) == 4:
-                            answer(res.f, val, res.f, res.c)
+                            answer(val, res.f, res.c)
                         else:
                             not_found('F')
                     elif res.c == 'GA':
                         if len(res.p) == 1:
                             for a in agent.values():
                                 if str(a.id) == res.p[0]:
-                                    answer(res.f, a, res.f, res.c)
+                                    answer(a, res.f, res.c)
                                     break
                         else:
                             not_found('F')
@@ -931,7 +906,7 @@ def process_msg(queue, res, i):
     else:
         not_found('F')
     queue.pop(0)
-    i.processing = False
+    processing = False
     return
             
 
