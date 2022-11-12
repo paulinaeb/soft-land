@@ -264,7 +264,6 @@ def detect_agents(this):
                     # gets distance between 2 centroids
                     d = get_distance(a.cx, this.cx, this.cy, a.cy)  
                     r_sum = a.radius + this.radius
-                    # print('this ', this.id,'b ', a.id, 'dis ', d, 'r sum ', r_sum) 
                     # if the distance is lower than the radius sum, returns true
                     if d < r_sum: 
                         flag += 1   
@@ -277,9 +276,15 @@ def detect_agents(this):
                         ax, ay = utils.w2vp(a.cx, a.cy, vpv)
                         bx, by = utils.w2vp(this.cx, this.cy, vpv)
                         px, py = (ax + bx) / 2, (ay + by) / 2
-                        this.add_draws(draw.draw_text(text = 'X', location = (px, py), color = 'gray', font='Helvetica 15'))
                         r, _ = utils.w2vp(3, 0, vpv)
-                        this.add_draws(draw.draw_circle((px, py), r, line_color='light pink') )
+                        this.add_draws(draw.draw_text(text = 'X', location = (px, py), color = 'gray', font='Helvetica 15'))
+                        this.add_draws(draw.draw_circle((px, py), r, line_color='light pink'))
+                        if this.dl and a.dl:
+                            this.has_big = 0
+                            a.has_big = 0
+                            a.dl = False
+                            this.dl = False
+                            draw.draw_circle((px, py), r, line_color='light pink')
     limit_col = 2.5
     if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
         send_collision(this.id)
@@ -619,7 +624,6 @@ def init_obj(obj_type):
                 obj[3] = r
                 # agents taking
                 obj.append(0)
-            print(big_obj)
         if len(small_obj) > 0:
             r = 1.5
             r2v, _ = utils.w2vp(r, 0, vpv)
@@ -850,7 +854,7 @@ def process_msg(queue, res, i):
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
                         else:
                             not_found('F')
-                    elif res.c in ('AR', 'FM'):
+                    elif res.c in ('AR', 'FM', 'SF'):
                         if len(res.p) == 1:
                             send_msg('0', res.f, 'AC', [])
                             send_msg('0', res.p[0], res.c, [res.f])
