@@ -569,24 +569,12 @@ def init_obj(obj_type):
                 rect = draw.draw_rectangle(top_left, top_right, fill_color='black')
                 text = draw.draw_text(text = str_time, location = (vpv_mid_x, vpv_mid_y), color = 'white', font='Helvetica 20')
         time.sleep(.8)
-        try:
-            draw.delete_figure(text)
-        except:
-            pass
+        draw.delete_figure(text)
         draw.draw_rectangle(top_left, top_right, fill_color='black')
-        try:
-            draw.delete_figure(rect)
-        except:
-            pass
-        try:
-            draw.delete_figure(title)
-        except: 
-            pass
+        draw.delete_figure(rect)
+        draw.delete_figure(title)
         if msg:
-            try:
-                draw.delete_figure(msg)
-            except:
-                pass
+            draw.delete_figure(msg)
         int_sec = None 
     if obj_type == 1:
         # calculates num of agents initialized
@@ -648,9 +636,9 @@ def send_msg(f, d, c, p):
     ser_msg = com.serialize(obj_resp)
     try:
         ser_port.write((ser_msg+',').encode())
+        print('Sent:', ser_msg)
     except serial.SerialException:
         pass
-    print('Sent:', ser_msg)
     return
 
 
