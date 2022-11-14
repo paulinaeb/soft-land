@@ -31,6 +31,7 @@ vpc = utils.ViewPort('camera')
 # for drawing in init agent
 vpv_mid_x = None
 vpv_mid_y = None
+show_info = False
 
 # handler
 event = None
@@ -285,6 +286,8 @@ def detect_agents(this):
                             a.dl = False
                             this.dl = False
                             draw.draw_circle((px, py), r, line_color='light pink')
+                            send_msg('0', str(this.id), 'DL', [])
+                            send_msg('0', str(a.id), 'DL', [])
     limit_col = 2.5
     if (this.cx < data.NEW_MIN_X + limit_col + this.radius or this.cx > data.NEW_MAX_X - limit_col - this.radius) or (this.cy < data.NEW_MIN_Y + limit_col + this.radius or this.cy > data.NEW_MAX_Y - limit_col - this.radius):
         send_collision(this.id)
@@ -343,6 +346,7 @@ def show_draws(frame, agnt, color):
             draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise')
             agnt.dl = False
             agnt.has_small = 0
+            send_msg('0', str(agnt.id), 'DL', [])
     return
 
 
@@ -502,7 +506,10 @@ def generate_mask(frame, hsv, color):
                     #distance between centroid and min angle vertex in world coordinates to get radius
                     r = get_distance(cx2, vx2, cy2, vy2)  + 1.2
                     # display info on frame 
-                    info = 'x: '+str(cx2)+'\ny:'+ str(cy2)+'\nt:'+str(direction)
+                    if show_info:
+                        info = 'x: '+str(cx2)+'\ny:'+ str(cy2)+'\nt:'+str(direction)
+                    else:
+                        info = ''
                     info2 = 'x: '+str(cx2)+' y:'+ str(cy2)+' t:'+str(direction)
                     cv2.putText(frame, info2, (vx, vy), 3, 0.5, (0, 0, 0))
                     # create object agent and assign values in the world  
