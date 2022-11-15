@@ -269,8 +269,10 @@ def detect_agents(this):
                     if d < r_sum: 
                         flag += 1   
                         if num_agents:                      # dir   # dis
-                            # send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
-                            # send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
+                            # if this.busy:
+                            #     send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
+                            #     if a.busy:
+                            #         send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
                             pass
                     # for drawing big obj
                     if this.has_big and a.has_big:
@@ -645,7 +647,8 @@ def send_msg(f, d, c, p):
         ser_port.write((ser_msg+',').encode())
         print('Sent:', ser_msg)
     except serial.SerialException:
-        pass
+        send_msg(f, d, c, p)
+        return
     return
 
 
