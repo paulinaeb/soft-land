@@ -22,6 +22,7 @@ ser_port = None
 found = None
 msg = None
 num_agents = 0
+drop = False
 
 # viewport for projector
 vpv = utils.ViewPort('video')
@@ -247,10 +248,9 @@ def detect_objects(this, d2detect, ob_list, is_small, is_big):
                 if d <= d_final:
                     if is_small:
                         c = 'SO'
-                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(this.radius + r_ob*1.5))])
                     if is_big:
-                        c = 'BO'                            # x          # y      #id_obj    # sum of radius
-                        send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2]), str(round(this.radius + r_ob*1.5))])
+                        c = 'BO'                            # x          # y      #id_obj  
+                    send_msg('0', str(this.id), c, [str(ob[0]), str(ob[1]), str(ob[2])])
 
 # detect agents around another (this)
 def detect_agents(this):
@@ -341,13 +341,18 @@ def show_draws(frame, agnt, color):
     if agnt.has_small:
         r2v, _ = utils.w2vp(1.5, 0, vpv)
         if not agnt.dl:
-            for i in range(agnt.has_small):
-                agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise'))
-                agnt.add_draws(draw.draw_text(text = 'X', location = (vx, vy), color = 'pale turquoise', font='Helvetica 15'))
+            agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise'))
+            agnt.add_draws(draw.draw_text(text = 'X', location = (vx, vy), color = 'pale turquoise', font='Helvetica 15'))
         else:
-            draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise')
+            id_draw = draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise')
             agnt.dl = False
             agnt.has_small = 0
+            global drop
+            if drop:
+                global small_obj
+                drop = False
+                small_obj = set_obj(small_obj, round(agnt.vx), round(agnt.vy), True, True)
+                small_obj[len(small_obj)-1][2] = id_draw
             send_msg('0', str(agnt.id), 'DL', [])
     return
 
@@ -416,14 +421,17 @@ big_obj = []
 small_obj = []
 home = []
 
-def set_obj(arr, cx, cy, is_movable):
+def set_obj(arr, cx, cy, is_movable, is_small):
     exists = False
     for obj in arr:
         if obj[0] in (cx - 1, cx, cx + 1) and obj[1] in (cy - 1, cy, cy + 1):
             exists = True
     if not exists:
         if is_movable:
-            arr.append([cx, cy, 0, 0])
+            if is_small:
+                arr.append([cx, cy, 0, 1.5])
+            else:
+                arr.append([cx, cy, 0, 3])
         else:
             arr.append([cx, cy])
     return arr
@@ -465,17 +473,17 @@ def generate_mask(frame, hsv, color):
                 cv2.drawContours(frame, [approx], 0, (0), 2)
                 if len(approx) == 4 and color == 'blue':
                     global obstacles
-                    obstacles = set_obj(obstacles, cx, cy, False)
+                    obstacles = set_obj(obstacles, cx, cy, False, False)
                 elif len(approx) > 13 and color == 'blue':
                     global big_obj
-                    big_obj = set_obj(big_obj, cx, cy, True)
+                    big_obj = set_obj(big_obj, cx, cy, True, False)
                 elif len(approx) == 4 and color == 'yellow':
                     global home
                     # x, y, radius
                     home = [cx, cy, 3]
                 elif len(approx) > 13 and color == 'yellow' and area < 850:
                     global small_obj
-                    small_obj = set_obj(small_obj, cx, cy, True)
+                    small_obj = set_obj(small_obj, cx, cy, True, True)
             # recognize triangles        
             elif len(approx) == 3 and color !='black':
                 flag = 0
@@ -618,17 +626,14 @@ def init_obj(obj_type):
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 id_draw = draw.draw_circle((x, y), r2v, line_color='light pink') 
                 obj[2] = id_draw
-                obj[3] = r
                 # agents taking
                 obj.append(0)
         if len(small_obj) > 0:
-            r = 1.5
-            r2v, _ = utils.w2vp(r, 0, vpv)
+            r2v, _ = utils.w2vp(small_obj[0][3], 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
                 id_draw = draw.draw_circle((x, y), r2v, line_color = 'pale turquoise')
                 obj[2] = id_draw
-                obj[3] = r
         if len(home) > 0:
             r2v, _ = utils.w2vp(home[2], 0, vpv)
             a = int(r2v*2)
@@ -846,19 +851,19 @@ def process_msg(queue, res, i):
                                     answer(a, res.f, res.c)
                                     break
                         else:
-                            not_found('F')
+                            not_found(res.f)
                     elif res.c == 'CA':
                         if len(res.p) == 4:
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
                         else:
-                            not_found('F')
+                            not_found(res.f)
                     elif res.c in ('AR', 'FM', 'SF'):
                         if len(res.p) == 1:
                             send_msg('0', res.f, 'AC', [])
                             send_msg('0', res.p[0], res.c, [res.f])
                         else:
-                            not_found('F')
-                    elif res.c in ('CL', 'FC', 'SC', 'FS', 'BU', 'NB', 'DL'):
+                            not_found(res.f)
+                    elif res.c in ('CL', 'FC', 'SC', 'FS', 'BU', 'NB'):
                         if not len(res.p):
                             send_msg('0', res.f, 'AC', [])
                             if res.c == 'CL':  
@@ -873,20 +878,41 @@ def process_msg(queue, res, i):
                                 val.busy = True
                             elif res.c == 'NB':
                                 val.busy = False
-                            elif res.c == 'DL':
-                                val.dl = True
                         else:
-                            not_found('F')
-                    elif res.c in ('SO', 'BO'):
+                            not_found(res.f)
+                    elif res.c == 'DL':
                         if len(res.p) == 1:
                             send_msg('0', res.f, 'AC', [])
-                            id_obj = int(res.p[0])
-                            if res.c == 'SO':
-                                take_obj(id_obj, small_obj, val, res.c)
-                            else:
-                                take_obj(id_obj, big_obj, val, res.c)
+                            val.dl = True
+                            if res.p[0] == '0':
+                                global drop
+                                drop = True
                         else:
-                            not_found('F')
+                            not_found(res.f)
+                    elif res.c in ('SO', 'BO'):
+                        if len(res.p) == 1:
+                            id_obj = int(res.p[0])
+                            f = False
+                            if res.c == 'SO':
+                                for a in small_obj:
+                                    if a[2] == id_obj:
+                                        send_msg('0', res.f, 'AC', [])
+                                        f = True
+                                        take_obj(id_obj, small_obj, val, res.c)
+                                        break
+                                if not f:
+                                    not_found(res.f)
+                            else:
+                                for a in big_obj:
+                                    if a[2] == id_obj:
+                                        send_msg('0', res.f, 'AC', [])
+                                        f = True
+                                        take_obj(id_obj, big_obj, val, res.c)
+                                        break
+                                if not f:
+                                    not_found(res.f)
+                        else:
+                            not_found(res.f)
                     elif res.c == 'HO':
                         if len(res.p) == 0:
                             if len(home):
@@ -895,13 +921,13 @@ def process_msg(queue, res, i):
                             else:
                                 send_msg('0', res.f, res.c, [])
                         else:
-                            not_found('F')
+                            not_found(res.f)
                     elif res.c == 'NM':
                         if len(res.p) == 1:
                             val.name = res.p[0]
                             send_msg('0', res.f, 'AC', [])
                         else:
-                            not_found('F')
+                            not_found(res.f)
                     else:
                         not_found('F')
                     break
