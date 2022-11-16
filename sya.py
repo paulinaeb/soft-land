@@ -633,7 +633,7 @@ def init_obj(obj_type):
         if len(obstacles) > 0:
             for obj in obstacles:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                draw.draw_rectangle((x - r2v, y - r2v), (x + r2v, y + r2v), fill_color='brown4')
+                draw.draw_rectangle((x - r2v, y - r2v), (x + r2v, y + r2v), fill_color='gray')
                 obj.append(r)
         if len(big_obj) > 0:
             for obj in big_obj:
@@ -679,14 +679,12 @@ def read_msg():
                     m_r = msg_read.split(',')
                     for i in range(len(m_r)-1):
                         if len(m_r[i]) < 4:
-                            not_found('F')
+                            pass
                         else:
                             for a in agent.values():
                                 if m_r[i][0] == str(a.id):
                                     a.msg_queue.append(m_r[i])
                                     break
-                else:
-                    not_found('F')
         except serial.SerialException:
             print('There was found a problem with your serial port connection. Please verify and try again.')
             
@@ -858,18 +856,14 @@ def process_msg(queue, res, i):
                 if str(val.id) == res.f:
                     # get position
                     if res.c == 'GP':
-                        if len(queue[0]) == 4:
+                        if not len(res.p):
                             get_pos(val, res.f, res.c)
-                        else:
-                            not_found('F')
                     elif res.c == 'GA':
                         if len(res.p) == 1:
                             for a in agent.values():
                                 if str(a.id) == res.p[0]:
                                     get_pos(a, res.f, res.c)
                                     break
-                        else:
-                            not_found(res.f)
                     elif res.c == 'CA':
                         if len(res.p) == 4:
                             send_msg('0', res.p[0], res.c, [res.f, res.p[1], res.p[2], res.p[3]])
@@ -910,25 +904,18 @@ def process_msg(queue, res, i):
                     elif res.c in ('SO', 'BO'):
                         if len(res.p) == 1:
                             id_obj = int(res.p[0])
-                            f = False
                             if res.c == 'SO':
                                 for a in small_obj:
                                     if a[2] == id_obj:
                                         ack(res.f)
-                                        f = True
                                         take_obj(id_obj, small_obj, val, res.c)
                                         break
-                                if not f:
-                                    not_found(res.f)
                             else:
                                 for a in big_obj:
                                     if a[2] == id_obj:
                                         ack(res.f)
-                                        f = True
                                         take_obj(id_obj, big_obj, val, res.c)
                                         break
-                                if not f:
-                                    not_found(res.f)
                         else:
                             not_found(res.f)
                     elif res.c == 'HO':
@@ -946,11 +933,7 @@ def process_msg(queue, res, i):
                             ack(res.f)
                         else:
                             not_found(res.f)
-                    else:
-                        not_found('F')
                     break
-    else:
-        not_found('F')
     queue.pop(0)
     processing = False
     return
