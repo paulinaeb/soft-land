@@ -280,14 +280,14 @@ def detect_agents(this):
                         bx, by = utils.w2vp(this.cx, this.cy, vpv)
                         px, py = (ax + bx) / 2, (ay + by) / 2
                         r, _ = utils.w2vp(3, 0, vpv)
-                        this.add_draws(draw.draw_text(text = 'X', location = (px, py), color = 'gray', font='Helvetica 15'))
-                        this.add_draws(draw.draw_circle((px, py), r, line_color='light pink'))
+                        this.add_draws(draw_x(px, py, 'light pink'))
+                        this.add_draws(draw_obj(px, py, r, 0))
                         if this.dl and a.dl:
                             this.has_big = 0
                             a.has_big = 0
                             a.dl = False
                             this.dl = False
-                            draw.draw_circle((px, py), r, line_color='light pink')
+                            draw_obj(px, py, r, 0)
                             send_msg('0', str(this.id), 'DL', [])
                             send_msg('0', str(a.id), 'DL', [])
     limit_col = 2.5
@@ -328,7 +328,7 @@ def show_draws(frame, agnt, color):
         cv2.circle(frame, (int(cxc), int(cyc)), int(rc - (rc * 0.28)), (0, 0, 255), 2)
        
     agnt.add_draws(draw.draw_circle((cxv, cyv), rv, line_color=color)) 
-    agnt.add_draws(draw.draw_text(text = 'X', location = (cxv, cyv), color = 'gray', font='Helvetica 10'))
+    agnt.add_draws(draw_x(cxv, cyv, 'gray'))
     
     vx, vy = utils.w2vp(agnt.vx, agnt.vy, vpv)
     if vy > cyv:
@@ -341,10 +341,10 @@ def show_draws(frame, agnt, color):
     if agnt.has_small:
         r2v, _ = utils.w2vp(1.5, 0, vpv)
         if not agnt.dl:
-            agnt.add_draws(draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise'))
-            agnt.add_draws(draw.draw_text(text = 'X', location = (vx, vy), color = 'pale turquoise', font='Helvetica 15'))
+            agnt.add_draws(draw_obj(vx, vy, r2v, 1))
+            agnt.add_draws(draw_x(vx, vy, 'pale turquoise'))
         else:
-            id_draw = draw.draw_circle((vx, vy), r2v, line_color = 'pale turquoise')
+            id_draw = draw_obj(vx, vy, r2v, 1)
             agnt.dl = False
             agnt.has_small = 0
             global drop
@@ -365,6 +365,20 @@ def show_line(frame, agnt, p1, p2, p3, p4):
     x2c, y2c = utils.w2vp(p3, p4, vpv) 
     agnt.add_draws(draw.draw_line((x1c, y1c), (x2c, y2c), color='blue')) 
     return
+
+
+def draw_obj(x, y, r, flag):
+    if flag:
+        col = 'pale turquoise'
+    else: 
+        col = 'light pink'
+    id_draw = draw.draw_circle((x, y), r, line_color = col)
+    return id_draw
+
+
+def draw_x(x, y, col):
+    id_x = draw.draw_text(text = 'X', location = (x, y), color = col, font='Helvetica 12')
+    return id_x
 
 
 def transform_points(frame, agnt): 
@@ -624,16 +638,14 @@ def init_obj(obj_type):
         if len(big_obj) > 0:
             for obj in big_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                id_draw = draw.draw_circle((x, y), r2v, line_color='light pink') 
-                obj[2] = id_draw
+                obj[2] = draw_obj(x, y, r2v, 0)
                 # agents taking
                 obj.append(0)
         if len(small_obj) > 0:
             r2v, _ = utils.w2vp(small_obj[0][3], 0, vpv)
             for obj in small_obj:
                 x, y = utils.w2vp(obj[0], obj[1], vpv)
-                id_draw = draw.draw_circle((x, y), r2v, line_color = 'pale turquoise')
-                obj[2] = id_draw
+                obj[2] = draw_obj(x, y, r2v, 1)
         if len(home) > 0:
             r2v, _ = utils.w2vp(home[2], 0, vpv)
             a = int(r2v*2)
@@ -813,9 +825,15 @@ def take_obj(id_obj, ob_list, val, c):
 
 def not_found(d):
     send_msg('0', d, 'NF', [])
+    return
+    
+
+def ack(d):
+    send_msg('0', d, 'AC', [])
+    return
 
 
-def answer(val, d, c):
+def get_pos(val, d, c):
     if val.cx:
         if val.cx <= 99.44:
             x = str(round(val.cx, 1))
@@ -841,14 +859,14 @@ def process_msg(queue, res, i):
                     # get position
                     if res.c == 'GP':
                         if len(queue[0]) == 4:
-                            answer(val, res.f, res.c)
+                            get_pos(val, res.f, res.c)
                         else:
                             not_found('F')
                     elif res.c == 'GA':
                         if len(res.p) == 1:
                             for a in agent.values():
                                 if str(a.id) == res.p[0]:
-                                    answer(a, res.f, res.c)
+                                    get_pos(a, res.f, res.c)
                                     break
                         else:
                             not_found(res.f)
@@ -859,13 +877,13 @@ def process_msg(queue, res, i):
                             not_found(res.f)
                     elif res.c in ('AR', 'FM', 'SF'):
                         if len(res.p) == 1:
-                            send_msg('0', res.f, 'AC', [])
+                            ack(res.f)
                             send_msg('0', res.p[0], res.c, [res.f])
                         else:
                             not_found(res.f)
                     elif res.c in ('CL', 'FC', 'SC', 'FS', 'BU', 'NB'):
                         if not len(res.p):
-                            send_msg('0', res.f, 'AC', [])
+                            ack(res.f)
                             if res.c == 'CL':  
                                 val.collision = True
                             elif res.c == 'FC':
@@ -882,7 +900,7 @@ def process_msg(queue, res, i):
                             not_found(res.f)
                     elif res.c == 'DL':
                         if len(res.p) == 1:
-                            send_msg('0', res.f, 'AC', [])
+                            ack(res.f)
                             val.dl = True
                             if res.p[0] == '0':
                                 global drop
@@ -896,7 +914,7 @@ def process_msg(queue, res, i):
                             if res.c == 'SO':
                                 for a in small_obj:
                                     if a[2] == id_obj:
-                                        send_msg('0', res.f, 'AC', [])
+                                        ack(res.f)
                                         f = True
                                         take_obj(id_obj, small_obj, val, res.c)
                                         break
@@ -905,7 +923,7 @@ def process_msg(queue, res, i):
                             else:
                                 for a in big_obj:
                                     if a[2] == id_obj:
-                                        send_msg('0', res.f, 'AC', [])
+                                        ack(res.f)
                                         f = True
                                         take_obj(id_obj, big_obj, val, res.c)
                                         break
@@ -925,7 +943,7 @@ def process_msg(queue, res, i):
                     elif res.c == 'NM':
                         if len(res.p) == 1:
                             val.name = res.p[0]
-                            send_msg('0', res.f, 'AC', [])
+                            ack(res.f)
                         else:
                             not_found(res.f)
                     else:
