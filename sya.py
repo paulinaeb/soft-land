@@ -268,12 +268,11 @@ def detect_agents(this):
                     # if the distance is lower than the radius sum, returns true
                     if d < r_sum: 
                         flag += 1   
-                        if num_agents:                      # dir   # dis
-                            # if this.busy:
-                            #     send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
-                            #     if a.busy:
-                            #         send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
-                            pass
+                        if num_agents:
+                                if this.busy and not this.collision:
+                                    send_msg('0', str(this.id), 'CR', [str('0'), str(round(this.radius, 2))])
+                                    if a.busy and not a.collision:
+                                        send_msg('0', str(a.id), 'CR', [str('1'), str(round(this.radius, 2))])
                     # for drawing big obj
                     if this.has_big and a.has_big:
                         ax, ay = utils.w2vp(a.cx, a.cy, vpv)
@@ -664,6 +663,7 @@ def send_msg(f, d, c, p):
         ser_port.write((ser_msg+',').encode())
         print('Sent:', ser_msg)
     except serial.SerialException:
+        print('serial exception on send msg')
         send_msg(f, d, c, p)
         return
     return
