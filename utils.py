@@ -9,8 +9,7 @@ agent = {'blue': None,
 
 #classes definition
 class ViewPort:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.u_min = self.u_max = self.v_min = self.v_max = self.du = self.dv = None
     def set_values(self,  u_min, v_min, u_max, v_max):
         self.u_min = u_min
@@ -18,10 +17,7 @@ class ViewPort:
         self.v_min = v_min
         self.v_max = v_max
         self.du = u_max - u_min
-        if self.name == 'camera':
-            self.dv = v_min - v_max
-        else:
-            self.dv = v_max - v_min
+        self.dv = v_min - v_max
     
 class Agent:
     def __init__(self, color): 
@@ -55,12 +51,7 @@ def get_id(color):
 def vp2w(x, y, VP):
     if VP.du > 0 and VP.dv > 0:
         value_x = round(((x - VP.u_min) * (data.NEW_MAX_X - data.NEW_MIN_X) / VP.du) + data.NEW_MIN_X, 2)
-        
-        if VP.name == 'camera':
-            diff_y = VP.v_min - y
-        else:
-            diff_y = y - VP.v_min
-            
+        diff_y = VP.v_min - y
         value_y = round((diff_y * (data.NEW_MAX_Y - data.NEW_MIN_Y) / VP.dv) + data.NEW_MIN_Y, 2)
         return value_x, value_y 
     else:
@@ -72,12 +63,7 @@ def w2vp(x, y, VP):
     div_y = data.NEW_MAX_Y - data.NEW_MIN_Y
     if div_x > 0 and div_y > 0:
         value_x = round(((x - data.NEW_MIN_X) * VP.du / div_x) + VP.u_min, 2)  
-        
-        if VP.name == 'camera':
-            diff_y = data.NEW_MIN_Y - y
-        else:
-            diff_y = y - data.NEW_MIN_Y
-            
+        diff_y = data.NEW_MIN_Y - y
         value_y = round((diff_y * VP.dv / div_y) + VP.v_min, 2)
         return value_x, value_y     
     else:
